@@ -8,9 +8,7 @@
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
           <h4 class="font-semibold">Utilisation</h4>
-          <div class="chart-stats text-sm text-gray-600">
-            {{ data.length }} échantillons
-          </div>
+
         </div>
       </div>
 
@@ -118,7 +116,17 @@ const cpuUtilValues = computed(() => {
 
 const memUtilValues = computed(() => {
   return props.data
-    .map((item) => parseFloat(item["SYS MEM UTIL"]))
+    .map((item) => {
+      // Try multiple possible column names for memory utilization
+      const memUtil =
+        parseFloat(item["SYSTEM MEM UTIL"]) ||
+        parseFloat(item["SYS MEM UTIL"]) ||
+        parseFloat(item["SYSTEM_MEM_UTIL"]) ||
+        parseFloat(item["SYS_MEM_UTIL"]) ||
+        parseFloat(item["MEM UTIL"]) ||
+        0;
+      return memUtil;
+    })
     .filter((util) => !isNaN(util) && util >= 0);
 });
 
@@ -158,7 +166,14 @@ const memUtilPoints = computed(() => {
     .filter((_, index) => index % step === 0)
     .slice(0, maxPoints)
     .map((item) => ({
-      util: parseFloat(item["SYS MEM UTIL"]),
+      // Try multiple possible column names for memory utilization
+      util:
+        parseFloat(item["SYSTEM MEM UTIL"]) ||
+        parseFloat(item["SYS MEM UTIL"]) ||
+        parseFloat(item["SYSTEM_MEM_UTIL"]) ||
+        parseFloat(item["SYS_MEM_UTIL"]) ||
+        parseFloat(item["MEM UTIL"]) ||
+        0,
       raw: item,
     }))
     .filter((point) => !isNaN(point.util) && point.util >= 0);

@@ -8,9 +8,7 @@
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
           <h4 class="font-semibold">Consommation</h4>
-          <div class="chart-stats text-sm text-gray-600">
-            {{ data.length }} échantillons
-          </div>
+
         </div>
       </div>
 
@@ -97,7 +95,16 @@ const gpuPowerValues = computed(() => {
 
 const cpuPowerValues = computed(() => {
   return props.data
-    .map((item) => parseFloat(item["CPU PWR"]))
+    .map((item) => {
+      // Try multiple possible column names for CPU power
+      const cpuPower =
+        parseFloat(item["CPU POWER"]) ||
+        parseFloat(item["CPU PWR"]) ||
+        parseFloat(item["CPU_POWER"]) ||
+        parseFloat(item["CPU_PWR"]) ||
+        0;
+      return cpuPower;
+    })
     .filter((power) => !isNaN(power) && power > 0);
 });
 
@@ -123,7 +130,13 @@ const cpuPowerPoints = computed(() => {
     .filter((_, index) => index % step === 0)
     .slice(0, maxPoints)
     .map((item) => ({
-      power: parseFloat(item["CPU PWR"]),
+      // Try multiple possible column names for CPU power
+      power:
+        parseFloat(item["CPU POWER"]) ||
+        parseFloat(item["CPU PWR"]) ||
+        parseFloat(item["CPU_POWER"]) ||
+        parseFloat(item["CPU_PWR"]) ||
+        0,
       raw: item,
     }))
     .filter((point) => !isNaN(point.power) && point.power > 0);

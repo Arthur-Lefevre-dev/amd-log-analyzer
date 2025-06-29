@@ -8,9 +8,6 @@
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
           <h4 class="font-semibold">Performance FPS</h4>
-          <div class="chart-stats text-sm text-gray-600">
-            {{ data.length }} échantillons
-          </div>
         </div>
       </div>
 

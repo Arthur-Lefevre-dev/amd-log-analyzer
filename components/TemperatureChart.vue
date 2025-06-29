@@ -8,9 +8,7 @@
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
           <h4 class="font-semibold">Températures</h4>
-          <div class="chart-stats text-sm text-gray-600">
-            {{ data.length }} échantillons
-          </div>
+
         </div>
       </div>
 
@@ -89,7 +87,17 @@ const gpuTempValues = computed(() => {
 
 const cpuTempValues = computed(() => {
   return props.data
-    .map((item) => parseFloat(item["CPU TEMP"]))
+    .map((item) => {
+      // Try multiple possible column names for CPU temperature
+      const cpuTemp =
+        parseFloat(item["CPU TEMPERATURE"]) ||
+        parseFloat(item["CPU TEMP"]) ||
+        parseFloat(item["CPU_TEMPERATURE"]) ||
+        parseFloat(item["CPU_TEMP"]) ||
+        parseFloat(item["TEMP CPU"]) ||
+        0;
+      return cpuTemp;
+    })
     .filter((temp) => !isNaN(temp) && temp > 0);
 });
 
@@ -115,7 +123,14 @@ const cpuTempPoints = computed(() => {
     .filter((_, index) => index % step === 0)
     .slice(0, maxPoints)
     .map((item) => ({
-      temp: parseFloat(item["CPU TEMP"]),
+      // Try multiple possible column names for CPU temperature
+      temp:
+        parseFloat(item["CPU TEMPERATURE"]) ||
+        parseFloat(item["CPU TEMP"]) ||
+        parseFloat(item["CPU_TEMPERATURE"]) ||
+        parseFloat(item["CPU_TEMP"]) ||
+        parseFloat(item["TEMP CPU"]) ||
+        0,
       raw: item,
     }))
     .filter((point) => !isNaN(point.temp) && point.temp > 0);

@@ -153,7 +153,10 @@
               </div>
             </div>
             <div class="chart-container">
-              <AppTimelineChart :data="analysisData.fpsData" />
+              <AppTimelineChart
+                :data="analysisData.fpsData"
+                :hardwareData="analysisData.utilizationData"
+              />
             </div>
           </div>
 

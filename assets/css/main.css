@@ -124,7 +124,7 @@ body {
 /* Chart Containers */
 .charts-section {
   display: grid;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .chart-card {
@@ -188,6 +188,7 @@ body {
   border-radius: 20px;
   padding: 2rem;
   margin-bottom: 2rem;
+  margin-top: 2rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
