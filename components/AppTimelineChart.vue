@@ -223,90 +223,7 @@
               />
             </template>
           </g>
-
-          <!-- Axis Labels -->
-          <!-- Y-axis Left Label (FPS) -->
-          <text
-            v-if="showLines.fps"
-            x="-35"
-            :y="chartHeight / 2"
-            fill="#374151"
-            font-size="14"
-            font-weight="600"
-            text-anchor="middle"
-            :transform="`rotate(-90, -35, ${chartHeight / 2})`"
-            class="axis-label"
-          >
-            FPS
-          </text>
-
-          <!-- Y-axis Right Label (Usage %) -->
-          <text
-            v-if="showLines.gpu || showLines.cpu"
-            :x="chartWidth + 35"
-            :y="chartHeight / 2"
-            fill="#374151"
-            font-size="14"
-            font-weight="600"
-            text-anchor="middle"
-            :transform="`rotate(90, ${chartWidth + 35}, ${chartHeight / 2})`"
-            class="axis-label"
-          >
-            Usage (%)
-          </text>
-
-          <!-- X-axis Label (Time) -->
-          <text
-            :x="chartWidth / 2"
-            :y="chartHeight + 55"
-            fill="#374151"
-            font-size="14"
-            font-weight="600"
-            text-anchor="middle"
-            class="axis-label"
-          >
-            Temps
-          </text>
         </svg>
-
-        <!-- Chart Labels -->
-        <div class="chart-labels">
-          <!-- Left Y-axis labels (FPS) -->
-          <div v-if="showLines.fps" class="y-labels-left">
-            <div
-              v-for="label in yAxisLabelsFps"
-              :key="'fps-' + label.value"
-              class="y-label"
-              :style="{ top: label.position + '%' }"
-            >
-              {{ label.value }} FPS
-            </div>
-          </div>
-
-          <!-- Right Y-axis labels (Usage %) -->
-          <div v-if="showLines.gpu || showLines.cpu" class="y-labels-right">
-            <div
-              v-for="label in yAxisLabelsUsage"
-              :key="'usage-' + label.value"
-              class="y-label"
-              :style="{ top: label.position + '%' }"
-            >
-              {{ label.value }}%
-            </div>
-          </div>
-
-          <!-- X-axis labels (Time) -->
-          <div class="x-labels">
-            <div
-              v-for="label in xAxisLabels"
-              :key="label.index"
-              class="x-label"
-              :style="{ left: label.position + '%' }"
-            >
-              {{ label.time }}
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Tooltip -->
@@ -869,31 +786,6 @@ const verticalGridLines = computed(() => {
 });
 
 // Axis labels
-const yAxisLabelsFps = computed(() => {
-  const labels = [];
-  const step = (maxFpsValue.value - minFpsValue.value) / 5;
-
-  for (let i = 0; i <= 5; i++) {
-    const value = Math.round(minFpsValue.value + step * i);
-    const position = 100 - i * 20; // Inverse position for top-to-bottom
-    labels.push({ value, position });
-  }
-
-  return labels;
-});
-
-const yAxisLabelsUsage = computed(() => {
-  const labels = [];
-
-  for (let i = 0; i <= 5; i++) {
-    const value = i * 20; // 0%, 20%, 40%, 60%, 80%, 100%
-    const position = 100 - i * 20; // Inverse position for top-to-bottom
-    labels.push({ value, position });
-  }
-
-  return labels;
-});
-
 const xAxisLabels = computed(() => {
   const labels = [];
   const totalPoints = chartData.value.length;
@@ -987,7 +879,7 @@ const formatTime = (index) => {
   background: #f9fafb;
   border-radius: 8px;
   padding: 1rem;
-  padding-bottom: 1rem;
+  padding-bottom: 2rem;
   overflow: visible;
   min-height: 0;
 }
@@ -1025,7 +917,7 @@ const formatTime = (index) => {
 
 .y-labels-left {
   position: absolute;
-  left: -60px;
+  left: -70px;
   top: 1rem;
   bottom: 1rem;
 }
