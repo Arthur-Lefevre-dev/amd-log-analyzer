@@ -7,8 +7,8 @@
         Sélectionnez vos fichiers AMD Adrenaline
       </h3>
       <p class="instruction-text">
-        Chargez les fichiers CSV générés par AMD Adrenaline pour analyser vos
-        performances gaming
+        Chargez les fichiers générés par AMD Adrenaline pour analyser vos
+        performances gaming (CSV requis, FrameTime optionnel)
       </p>
     </div>
 
@@ -19,6 +19,7 @@
         <div class="upload-header">
           <Icon name="lucide:activity" class="upload-icon" />
           <h4 class="upload-title">Fichier FPS/Latency</h4>
+          <span class="upload-badge required">Requis</span>
         </div>
 
         <div
@@ -62,6 +63,7 @@
         <div class="upload-header">
           <Icon name="lucide:cpu" class="upload-icon" />
           <h4 class="upload-title">Fichier Hardware</h4>
+          <span class="upload-badge required">Requis</span>
         </div>
 
         <div
@@ -101,6 +103,54 @@
           </div>
         </div>
       </div>
+
+      <!-- FrameTime File Upload -->
+      <div class="upload-card frametime-card">
+        <div class="upload-header">
+          <Icon name="lucide:clock" class="upload-icon" />
+          <h4 class="upload-title">Fichier FrameTime</h4>
+          <span class="upload-badge optional">Optionnel</span>
+        </div>
+
+        <div
+          ref="frametimeUploadArea"
+          class="upload-zone"
+          :class="{
+            'upload-zone-active': isDragOverFrametime,
+            'upload-zone-success': frametimeFile,
+          }"
+          @drop.prevent="handleFrametimeDrop"
+          @dragover.prevent="isDragOverFrametime = true"
+          @dragenter.prevent="isDragOverFrametime = true"
+          @dragleave.prevent="isDragOverFrametime = false"
+          @click="triggerFrametimeInput"
+        >
+          <div v-if="!frametimeFile" class="upload-placeholder">
+            <Icon name="lucide:upload-cloud" class="placeholder-icon" />
+            <div class="placeholder-text">
+              <p class="placeholder-main">
+                Glissez votre fichier FrameTime ici
+              </p>
+              <p class="placeholder-sub">ou cliquez pour sélectionner</p>
+              <p class="placeholder-format">Format: *.FrameTime</p>
+            </div>
+          </div>
+
+          <div v-else class="upload-success">
+            <Icon name="lucide:check-circle" class="success-icon" />
+            <div class="success-content">
+              <p class="success-title">Fichier FrameTime chargé</p>
+              <p class="success-filename">{{ frametimeFile.name }}</p>
+              <p class="success-size">
+                {{ formatFileSize(frametimeFile.size) }}
+              </p>
+            </div>
+            <button @click.stop="clearFrametimeFile" class="clear-button">
+              <Icon name="lucide:x" class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Upload Status -->
@@ -117,11 +167,27 @@
           <span>Hardware</span>
           <Icon v-if="hardwareFile" name="lucide:check" class="status-check" />
         </div>
+        <div class="status-divider"></div>
+        <div
+          class="status-item"
+          :class="{
+            'status-complete': frametimeFile,
+            'status-optional': !frametimeFile,
+          }"
+        >
+          <Icon name="lucide:clock" class="status-icon" />
+          <span>FrameTime</span>
+          <Icon v-if="frametimeFile" name="lucide:check" class="status-check" />
+          <span v-else class="status-optional-text">(optionnel)</span>
+        </div>
       </div>
 
       <div v-if="fpsFile && hardwareFile" class="status-ready">
         <Icon name="lucide:check-circle" class="ready-icon" />
         <span class="ready-text">Prêt pour l'analyse !</span>
+        <span v-if="frametimeFile" class="ready-bonus"
+          >+ FrameTime détaillé</span
+        >
       </div>
     </div>
 
@@ -148,6 +214,13 @@
       class="hidden"
       @change="handleHardwareFileSelect"
     />
+    <input
+      ref="frametimeFileInput"
+      type="file"
+      accept=".frameTime"
+      class="hidden"
+      @change="handleFrametimeFileSelect"
+    />
   </div>
 </template>
 
@@ -161,13 +234,20 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(["fps-file", "hardware-file"]);
+const emit = defineEmits(["fps-file", "hardware-file", "frametime-file"]);
 
 // State
 const fpsFile = ref(null);
 const hardwareFile = ref(null);
+const frametimeFile = ref(null);
 const isDragOverFps = ref(false);
 const isDragOverHardware = ref(false);
+const isDragOverFrametime = ref(false);
+
+// Refs
+const fpsFileInput = ref(null);
+const hardwareFileInput = ref(null);
+const frametimeFileInput = ref(null);
 
 // Methods
 const handleFpsDrop = (event) => {
@@ -198,15 +278,17 @@ const handleHardwareDrop = (event) => {
   }
 };
 
-const triggerFpsInput = () => {
-  if (!props.isLoading) {
-    document.querySelector("#fpsFileInput")?.click();
-  }
-};
-
-const triggerHardwareInput = () => {
-  if (!props.isLoading) {
-    document.querySelector("#hardwareFileInput")?.click();
+const handleFrametimeDrop = (event) => {
+  isDragOverFrametime.value = false;
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    const file = files[0];
+    if (isValidFrameTimeFile(file)) {
+      frametimeFile.value = file;
+      emit("frametime-file", file);
+    } else {
+      alert("Veuillez sélectionner un fichier .FrameTime valide");
+    }
   }
 };
 
@@ -215,8 +297,6 @@ const handleFpsFileSelect = (event) => {
   if (file && isValidCSV(file)) {
     fpsFile.value = file;
     emit("fps-file", file);
-  } else if (file) {
-    alert("Veuillez sélectionner un fichier CSV valide");
   }
 };
 
@@ -225,13 +305,62 @@ const handleHardwareFileSelect = (event) => {
   if (file && isValidCSV(file)) {
     hardwareFile.value = file;
     emit("hardware-file", file);
-  } else if (file) {
-    alert("Veuillez sélectionner un fichier CSV valide");
+  }
+};
+
+const handleFrametimeFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (file && isValidFrameTimeFile(file)) {
+    frametimeFile.value = file;
+    emit("frametime-file", file);
+  }
+};
+
+const triggerFpsInput = () => {
+  fpsFileInput.value?.click();
+};
+
+const triggerHardwareInput = () => {
+  hardwareFileInput.value?.click();
+};
+
+const triggerFrametimeInput = () => {
+  frametimeFileInput.value?.click();
+};
+
+const clearFpsFile = () => {
+  fpsFile.value = null;
+  emit("fps-file", null);
+  if (fpsFileInput.value) {
+    fpsFileInput.value.value = "";
+  }
+};
+
+const clearHardwareFile = () => {
+  hardwareFile.value = null;
+  emit("hardware-file", null);
+  if (hardwareFileInput.value) {
+    hardwareFileInput.value.value = "";
+  }
+};
+
+const clearFrametimeFile = () => {
+  frametimeFile.value = null;
+  emit("frametime-file", null);
+  if (frametimeFileInput.value) {
+    frametimeFileInput.value.value = "";
   }
 };
 
 const isValidCSV = (file) => {
   return file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv");
+};
+
+const isValidFrameTimeFile = (file) => {
+  return (
+    file.name.toLowerCase().includes(".frametime") ||
+    file.name.toLowerCase().endsWith(".frametime")
+  );
 };
 
 const formatFileSize = (bytes) => {
@@ -242,24 +371,18 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
-const clearFpsFile = () => {
-  fpsFile.value = null;
-  emit("fps-file", null);
-};
-
-const clearHardwareFile = () => {
-  hardwareFile.value = null;
-  emit("hardware-file", null);
-};
-
 // Update refs for inputs
 onMounted(() => {
   const fpsInput = document.querySelector('input[type="file"]:first-of-type');
   const hardwareInput = document.querySelector(
+    'input[type="file"]:nth-of-type(2)'
+  );
+  const frametimeInput = document.querySelector(
     'input[type="file"]:last-of-type'
   );
   if (fpsInput) fpsInput.id = "fpsFileInput";
   if (hardwareInput) hardwareInput.id = "hardwareFileInput";
+  if (frametimeInput) frametimeInput.id = "frametimeFileInput";
 });
 </script>
 
@@ -298,7 +421,7 @@ onMounted(() => {
 
 .upload-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
 }
@@ -554,6 +677,59 @@ onMounted(() => {
 .ready-text {
   font-weight: 600;
   font-size: 1.125rem;
+}
+
+.ready-bonus {
+  font-size: 0.875rem;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.frametime-card {
+  border-left: 4px solid #f59e0b;
+}
+
+.frametime-card .upload-icon {
+  color: #f59e0b;
+}
+
+.upload-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.upload-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.upload-badge.required {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.upload-badge.optional {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fed7aa;
+}
+
+.status-item.status-optional {
+  opacity: 0.7;
+}
+
+.status-optional-text {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #9ca3af;
 }
 
 .loading-overlay {

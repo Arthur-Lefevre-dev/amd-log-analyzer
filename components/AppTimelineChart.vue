@@ -6,76 +6,59 @@
     <div v-else class="chart-wrapper">
       <!-- Chart Header -->
       <div class="chart-header mb-4">
-        <div class="flex justify-between items-center">
-          <div class="app-details">
-            <h4 class="font-semibold text-lg">{{ currentApp }}</h4>
-            <p class="text-sm text-gray-600">
-              {{ chartData.length }} échantillons | FPS Moyen: {{ avgFps }} |
-              GPU: {{ avgGpuUsage }}% | CPU: {{ avgCpuUsage }}% | Session:
-              {{ formatDuration(sessionDuration) }}
-            </p>
-          </div>
-
-          <!-- Visibility Controls -->
-          <div class="visibility-controls flex gap-2">
-            <button
-              @click="toggleVisibility('fps')"
-              :class="[
-                'visibility-btn',
-                { active: showLines.fps, 'fps-btn': true },
-              ]"
-              title="Afficher/Masquer FPS"
-            >
-              <div class="btn-color bg-blue-500"></div>
-              <span>FPS</span>
-            </button>
-            <button
-              @click="toggleVisibility('gpu')"
-              :class="[
-                'visibility-btn',
-                { active: showLines.gpu, 'gpu-btn': true },
-              ]"
-              title="Afficher/Masquer GPU Usage"
-            >
-              <div class="btn-color bg-green-500"></div>
-              <span>GPU</span>
-            </button>
-            <button
-              @click="toggleVisibility('cpu')"
-              :class="[
-                'visibility-btn',
-                { active: showLines.cpu, 'cpu-btn': true },
-              ]"
-              title="Afficher/Masquer CPU Usage"
-            >
-              <div class="btn-color bg-orange-500"></div>
-              <span>CPU</span>
-            </button>
-          </div>
+        <div class="app-details">
+          <h4 class="font-semibold text-lg">{{ currentApp }}</h4>
+          <p class="text-sm text-gray-600">
+            Session:
+            {{ sessionDurationFormatted }}
+          </p>
         </div>
+      </div>
 
-        <!-- Legend -->
-        <div class="chart-legend flex gap-4 text-xs mt-2">
-          <div v-if="showLines.fps" class="legend-item">
-            <div class="legend-color bg-blue-500"></div>
-            <span>FPS ({{ minFps }} - {{ maxFps }})</span>
-          </div>
-          <div v-if="showLines.gpu" class="legend-item">
-            <div class="legend-color bg-green-500"></div>
-            <span>GPU Usage ({{ minGpuUsage }}% - {{ maxGpuUsage }}%)</span>
-          </div>
-          <div v-if="showLines.cpu" class="legend-item">
-            <div class="legend-color bg-orange-500"></div>
-            <span>CPU Usage ({{ minCpuUsage }}% - {{ maxCpuUsage }}%)</span>
-          </div>
+      <!-- Visibility Controls -->
+      <div class="visibility-controls-bottom mb-4">
+        <div class="flex gap-2">
+          <button
+            @click="toggleVisibility('fps')"
+            :class="[
+              'visibility-btn',
+              { active: showLines.fps, 'fps-btn': true },
+            ]"
+            title="Afficher/Masquer FPS"
+          >
+            <div class="btn-color bg-blue-500"></div>
+            <span>FPS</span>
+          </button>
+          <button
+            @click="toggleVisibility('gpu')"
+            :class="[
+              'visibility-btn',
+              { active: showLines.gpu, 'gpu-btn': true },
+            ]"
+            title="Afficher/Masquer GPU Usage"
+          >
+            <div class="btn-color bg-green-500"></div>
+            <span>GPU</span>
+          </button>
+          <button
+            @click="toggleVisibility('cpu')"
+            :class="[
+              'visibility-btn',
+              { active: showLines.cpu, 'cpu-btn': true },
+            ]"
+            title="Afficher/Masquer CPU Usage"
+          >
+            <div class="btn-color bg-orange-500"></div>
+            <span>CPU</span>
+          </button>
         </div>
       </div>
 
       <!-- Multi-Axis Line Chart -->
-      <div class="line-chart-container">
+      <div ref="chartContainer" class="line-chart-container">
         <svg
           class="line-chart-svg"
-          :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
+          :viewBox="`-50 -20 ${chartWidth + 100} ${chartHeight + 80}`"
           preserveAspectRatio="none"
         >
           <!-- Grid Lines -->
@@ -157,6 +140,133 @@
             stroke-linecap="round"
             class="cpu-line"
           />
+
+          <!-- Frame Time Line Path -->
+          <path
+            v-if="showFrameTime"
+            :d="frameTimeLinePath"
+            fill="none"
+            stroke="#7c3aed"
+            stroke-width="2"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            class="frametime-line"
+          />
+
+          <!-- Interactive Points -->
+          <g class="chart-points">
+            <!-- FPS Points -->
+            <template v-if="showLines.fps">
+              <circle
+                v-for="(point, index) in chartData"
+                :key="'fps-point-' + index"
+                :cx="point.x"
+                :cy="point.fpsY"
+                r="3"
+                fill="#3b82f6"
+                stroke="white"
+                stroke-width="1"
+                class="chart-point fps-point"
+                @mouseover="showTooltip($event, point, 'fps')"
+                @mouseleave="hideTooltip"
+              />
+            </template>
+
+            <!-- GPU Points -->
+            <template v-if="showLines.gpu">
+              <circle
+                v-for="(point, index) in chartData"
+                :key="'gpu-point-' + index"
+                :cx="point.x"
+                :cy="point.gpuUsageY"
+                r="2.5"
+                fill="#10b981"
+                stroke="white"
+                stroke-width="1"
+                class="chart-point gpu-point"
+                @mouseover="showTooltip($event, point, 'gpu')"
+                @mouseleave="hideTooltip"
+              />
+            </template>
+
+            <!-- CPU Points -->
+            <template v-if="showLines.cpu">
+              <circle
+                v-for="(point, index) in chartData"
+                :key="'cpu-point-' + index"
+                :cx="point.x"
+                :cy="point.cpuUsageY"
+                r="2.5"
+                fill="#f97316"
+                stroke="white"
+                stroke-width="1"
+                class="chart-point cpu-point"
+                @mouseover="showTooltip($event, point, 'cpu')"
+                @mouseleave="hideTooltip"
+              />
+            </template>
+
+            <!-- Frame Time Points -->
+            <template v-if="showFrameTime">
+              <circle
+                v-for="(point, index) in chartData"
+                :key="'frametime-point-' + index"
+                :cx="point.x"
+                :cy="point.frameTimeY"
+                r="2.5"
+                fill="#7c3aed"
+                stroke="white"
+                stroke-width="1"
+                class="chart-point frametime-point"
+                @mouseover="showTooltip($event, point, 'frametime')"
+                @mouseleave="hideTooltip"
+              />
+            </template>
+          </g>
+
+          <!-- Axis Labels -->
+          <!-- Y-axis Left Label (FPS) -->
+          <text
+            v-if="showLines.fps"
+            x="-35"
+            :y="chartHeight / 2"
+            fill="#374151"
+            font-size="14"
+            font-weight="600"
+            text-anchor="middle"
+            :transform="`rotate(-90, -35, ${chartHeight / 2})`"
+            class="axis-label"
+          >
+            FPS
+          </text>
+
+          <!-- Y-axis Right Label (Usage %) -->
+          <text
+            v-if="showLines.gpu || showLines.cpu"
+            :x="chartWidth + 35"
+            :y="chartHeight / 2"
+            fill="#374151"
+            font-size="14"
+            font-weight="600"
+            text-anchor="middle"
+            :transform="`rotate(90, ${chartWidth + 35}, ${chartHeight / 2})`"
+            class="axis-label"
+          >
+            Usage (%)
+          </text>
+
+          <!-- X-axis Label (Time) -->
+          <text
+            :x="chartWidth / 2"
+            :y="chartHeight + 55"
+            fill="#374151"
+            font-size="14"
+            font-weight="600"
+            text-anchor="middle"
+            class="axis-label"
+          >
+            Temps
+          </text>
         </svg>
 
         <!-- Chart Labels -->
@@ -199,31 +309,83 @@
         </div>
       </div>
 
-      <!-- Performance Summary -->
-      <div class="chart-summary mt-4 flex gap-4 text-center">
-        <div v-if="showLines.fps" class="summary-item">
-          <div class="text-lg font-bold text-blue-600">{{ avgFps }}</div>
-          <div class="text-xs text-gray-500">FPS Moyen</div>
-        </div>
-        <div v-if="showLines.gpu" class="summary-item">
-          <div class="text-lg font-bold text-green-600">{{ avgGpuUsage }}%</div>
-          <div class="text-xs text-gray-500">GPU Moyen</div>
-        </div>
-        <div v-if="showLines.cpu" class="summary-item">
-          <div class="text-lg font-bold text-orange-600">
-            {{ avgCpuUsage }}%
+      <!-- Tooltip -->
+      <div
+        v-if="tooltip.visible"
+        class="chart-tooltip"
+        :style="{
+          left: tooltip.x + 'px',
+          top: tooltip.y + 'px',
+        }"
+      >
+        <div class="tooltip-content">
+          <div class="tooltip-title">{{ tooltip.title }}</div>
+          <div class="tooltip-value">{{ tooltip.value }}</div>
+          <div v-if="tooltip.timestamp" class="tooltip-time">
+            {{ tooltip.timestamp }}
           </div>
-          <div class="text-xs text-gray-500">CPU Moyen</div>
         </div>
-        <div v-if="showLines.gpu" class="summary-item">
-          <div class="text-lg font-bold text-purple-600">
-            {{ maxGpuUsage }}%
+      </div>
+
+      <!-- Legend Section -->
+      <div class="legend-section">
+        <!-- Legend -->
+        <div class="chart-legend flex gap-4 text-xs justify-center">
+          <div v-if="showLines.fps" class="legend-item">
+            <div class="legend-color bg-blue-500"></div>
+            <span>FPS ({{ minFps }} - {{ maxFps }})</span>
           </div>
-          <div class="text-xs text-gray-500">GPU Max</div>
+          <div v-if="showLines.gpu" class="legend-item">
+            <div class="legend-color bg-green-500"></div>
+            <span>GPU Usage ({{ minGpuUsage }}% - {{ maxGpuUsage }}%)</span>
+          </div>
+          <div v-if="showLines.cpu" class="legend-item">
+            <div class="legend-color bg-orange-500"></div>
+            <span>CPU Usage ({{ minCpuUsage }}% - {{ maxCpuUsage }}%)</span>
+          </div>
+          <div v-if="showFrameTime" class="legend-item">
+            <div class="legend-color bg-purple-500"></div>
+            <span>Frame Time ({{ minFrameTime }} - {{ maxFrameTime }} ms)</span>
+          </div>
         </div>
-        <div v-if="showLines.cpu" class="summary-item">
-          <div class="text-lg font-bold text-red-600">{{ maxCpuUsage }}%</div>
-          <div class="text-xs text-gray-500">CPU Max</div>
+
+        <!-- Performance Summary -->
+        <div class="chart-summary mt-4 flex gap-4 text-center">
+          <div v-if="showLines.fps" class="summary-item">
+            <div class="text-lg font-bold text-blue-600">{{ avgFps }}</div>
+            <div class="text-xs text-gray-500">FPS Moyen</div>
+          </div>
+          <div v-if="showLines.gpu" class="summary-item">
+            <div class="text-lg font-bold text-green-600">
+              {{ avgGpuUsage }}%
+            </div>
+            <div class="text-xs text-gray-500">GPU Moyen</div>
+          </div>
+          <div v-if="showLines.cpu" class="summary-item">
+            <div class="text-lg font-bold text-orange-600">
+              {{ avgCpuUsage }}%
+            </div>
+            <div class="text-xs text-gray-500">CPU Moyen</div>
+          </div>
+          <div v-if="showLines.gpu" class="summary-item">
+            <div class="text-lg font-bold text-purple-600">
+              {{ maxGpuUsage }}%
+            </div>
+            <div class="text-xs text-gray-500">GPU Max</div>
+          </div>
+          <div v-if="showLines.cpu" class="summary-item">
+            <div class="text-lg font-bold text-red-600">{{ maxCpuUsage }}%</div>
+            <div class="text-xs text-gray-500">CPU Max</div>
+          </div>
+          <div
+            v-if="showFrameTime && frameTimeValues.length > 0"
+            class="summary-item"
+          >
+            <div class="text-lg font-bold text-purple-600">
+              {{ avgFrameTime }}ms
+            </div>
+            <div class="text-xs text-gray-500">Frame Time Moy</div>
+          </div>
         </div>
       </div>
     </div>
@@ -241,11 +403,47 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  frametimeData: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-// Chart dimensions
-const chartWidth = 1000;
-const chartHeight = 300;
+// Chart dimensions (responsive)
+const chartContainer = ref(null);
+const chartWidth = ref(1200);
+const chartHeight = ref(400);
+
+// Responsive chart sizing
+const updateChartSize = () => {
+  if (chartContainer.value) {
+    const containerWidth = chartContainer.value.clientWidth - 120; // Account for padding and labels
+    const aspectRatio = 3; // Width to height ratio
+
+    chartWidth.value = Math.max(800, containerWidth); // Minimum 800px width
+    chartHeight.value = Math.max(300, chartWidth.value / aspectRatio); // Maintain aspect ratio
+  }
+};
+
+// Set up resize observer
+onMounted(() => {
+  updateChartSize();
+
+  if (typeof window !== "undefined") {
+    const resizeObserver = new ResizeObserver(() => {
+      updateChartSize();
+    });
+
+    if (chartContainer.value) {
+      resizeObserver.observe(chartContainer.value);
+    }
+
+    // Cleanup
+    onUnmounted(() => {
+      resizeObserver.disconnect();
+    });
+  }
+});
 
 // Visibility controls
 const showLines = ref({
@@ -254,9 +452,66 @@ const showLines = ref({
   cpu: true,
 });
 
+// Frame Time is NOT shown on Performance FPS chart
+const showFrameTime = computed(() => {
+  return false; // Disable Frame Time on this chart
+});
+
+// Tooltip state
+const tooltip = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  title: "",
+  value: "",
+  timestamp: "",
+});
+
 // Methods for visibility control
 const toggleVisibility = (lineType) => {
   showLines.value[lineType] = !showLines.value[lineType];
+};
+
+// Tooltip methods
+const showTooltip = (event, point, type) => {
+  const rect = event.target
+    .closest(".line-chart-container")
+    .getBoundingClientRect();
+
+  let title = "";
+  let value = "";
+
+  switch (type) {
+    case "fps":
+      title = "FPS";
+      value = point.fps.toFixed(1);
+      break;
+    case "gpu":
+      title = "GPU Usage";
+      value = point.gpuUsage.toFixed(1) + "%";
+      break;
+    case "cpu":
+      title = "CPU Usage";
+      value = point.cpuUsage.toFixed(1) + "%";
+      break;
+    case "frametime":
+      title = "Frame Time";
+      value = point.frameTime.toFixed(1) + "ms";
+      break;
+  }
+
+  tooltip.value = {
+    visible: true,
+    x: event.clientX - rect.left + 10,
+    y: event.clientY - rect.top - 10,
+    title: title,
+    value: value,
+    timestamp: point.timestamp,
+  };
+};
+
+const hideTooltip = () => {
+  tooltip.value.visible = false;
 };
 
 // Computed properties for merged data
@@ -297,21 +552,43 @@ const chartData = computed(() => {
       const fpsIndex = Math.floor((i / minLength) * fpsData.length);
       const hwIndex = Math.floor((i / minLength) * hardwareData.length);
 
+      // Get frameTime data if available
+      let frameTime = 0;
+      if (props.frametimeData && props.frametimeData.length > 0) {
+        const ftIndex = Math.floor(
+          (i / minLength) * props.frametimeData.length
+        );
+        frameTime = props.frametimeData[ftIndex]?.frameTime || 0;
+      }
+
       mergedData.push({
         fps: fpsData[fpsIndex]?.fps || 0,
         gpuUsage: hardwareData[hwIndex]?.gpuUsage || 0,
         cpuUsage: hardwareData[hwIndex]?.cpuUsage || 0,
+        frameTime: frameTime,
         process: fpsData[fpsIndex]?.process || "Unknown",
         index: i,
       });
     }
   } else {
     // Fallback: use only FPS data with 0% usage values
-    mergedData = fpsData.map((point) => ({
-      ...point,
-      gpuUsage: 0,
-      cpuUsage: 0,
-    }));
+    mergedData = fpsData.map((point, index) => {
+      // Get frameTime data if available
+      let frameTime = 0;
+      if (props.frametimeData && props.frametimeData.length > 0) {
+        const ftIndex = Math.floor(
+          (index / fpsData.length) * props.frametimeData.length
+        );
+        frameTime = props.frametimeData[ftIndex]?.frameTime || 0;
+      }
+
+      return {
+        ...point,
+        gpuUsage: 0,
+        cpuUsage: 0,
+        frameTime: frameTime,
+      };
+    });
   }
 
   // Smart sampling to reduce points and smooth the graph
@@ -352,25 +629,35 @@ const chartData = computed(() => {
 
   // Calculate positions for each data point
   return sampledData.map((point, index, array) => {
-    const x = (index / Math.max(1, array.length - 1)) * chartWidth;
+    const x = (index / Math.max(1, array.length - 1)) * chartWidth.value;
 
     // FPS positioning (using FPS min/max range)
     const fpsValues = array.map((p) => p.fps);
     const minFps = Math.min(...fpsValues);
     const maxFps = Math.max(...fpsValues);
     const fpsY =
-      chartHeight - ((point.fps - minFps) / (maxFps - minFps)) * chartHeight;
+      chartHeight.value -
+      ((point.fps - minFps) / (maxFps - minFps)) * chartHeight.value;
 
     // Usage positioning (0-100% range)
-    const gpuUsageY = chartHeight - (point.gpuUsage / 100) * chartHeight;
-    const cpuUsageY = chartHeight - (point.cpuUsage / 100) * chartHeight;
+    const gpuUsageY =
+      chartHeight.value - (point.gpuUsage / 100) * chartHeight.value;
+    const cpuUsageY =
+      chartHeight.value - (point.cpuUsage / 100) * chartHeight.value;
+
+    // Frame Time positioning (scale to 0-100ms range for display)
+    const maxFrameTimeForScale = 100; // 100ms max for scaling
+    const frameTimeY =
+      chartHeight.value -
+      Math.min(point.frameTime / maxFrameTimeForScale, 1) * chartHeight.value;
 
     return {
       ...point,
-      x: Math.max(0, Math.min(chartWidth, x)),
-      fpsY: Math.max(5, Math.min(chartHeight - 5, fpsY)),
-      gpuUsageY: Math.max(5, Math.min(chartHeight - 5, gpuUsageY)),
-      cpuUsageY: Math.max(5, Math.min(chartHeight - 5, cpuUsageY)),
+      x: Math.max(0, Math.min(chartWidth.value, x)),
+      fpsY: Math.max(5, Math.min(chartHeight.value - 5, fpsY)),
+      gpuUsageY: Math.max(5, Math.min(chartHeight.value - 5, gpuUsageY)),
+      cpuUsageY: Math.max(5, Math.min(chartHeight.value - 5, cpuUsageY)),
+      frameTimeY: Math.max(5, Math.min(chartHeight.value - 5, frameTimeY)),
     };
   });
 });
@@ -382,7 +669,47 @@ const currentApp = computed(() => {
 });
 
 const sessionDuration = computed(() => {
-  return Math.floor(chartData.value.length / 60); // Estimation en minutes
+  if (props.data.length < 2) return 0;
+
+  // Try to calculate duration from timestamps
+  const firstTimestamp =
+    props.data[0]?.["TIME STAMP"] || props.data[0]?.Timestamp;
+  const lastTimestamp =
+    props.data[props.data.length - 1]?.["TIME STAMP"] ||
+    props.data[props.data.length - 1]?.Timestamp;
+
+  if (firstTimestamp && lastTimestamp) {
+    try {
+      // Parse timestamps (format: "2025-06-29 19:33:30.230")
+      const startTime = new Date(firstTimestamp);
+      const endTime = new Date(lastTimestamp);
+
+      if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+        const durationMs = endTime.getTime() - startTime.getTime();
+        return Math.floor(durationMs / 1000); // Return duration in seconds
+      }
+    } catch {
+      console.warn("Could not parse timestamps, falling back to estimation");
+    }
+  }
+
+  // Fallback: estimate based on sample count (assuming ~250ms between samples)
+  return Math.floor(chartData.value.length * 0.25); // 0.25 seconds per sample
+});
+
+const sessionDurationFormatted = computed(() => {
+  const totalSeconds = sessionDuration.value;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
+  }
 });
 
 // FPS Statistics
@@ -442,6 +769,26 @@ const avgCpuUsage = computed(() => {
   return avg.toFixed(1);
 });
 
+// Frame Time Statistics
+const frameTimeValues = computed(() =>
+  chartData.value.map((point) => point.frameTime).filter((ft) => ft > 0)
+);
+const minFrameTimeValue = computed(() =>
+  frameTimeValues.value.length > 0 ? Math.min(...frameTimeValues.value) : 0
+);
+const maxFrameTimeValue = computed(() =>
+  frameTimeValues.value.length > 0 ? Math.max(...frameTimeValues.value) : 0
+);
+const minFrameTime = computed(() => minFrameTimeValue.value.toFixed(1));
+const maxFrameTime = computed(() => maxFrameTimeValue.value.toFixed(1));
+const avgFrameTime = computed(() => {
+  if (frameTimeValues.value.length === 0) return "0";
+  const avg =
+    frameTimeValues.value.reduce((a, b) => a + b, 0) /
+    frameTimeValues.value.length;
+  return avg.toFixed(1);
+});
+
 // Line paths for SVG
 const fpsLinePath = computed(() => {
   if (chartData.value.length === 0) return "";
@@ -470,6 +817,16 @@ const cpuUsageLinePath = computed(() => {
   return path;
 });
 
+// Frame Time Line Path
+const frameTimeLinePath = computed(() => {
+  if (props.frametimeData.length === 0) return "";
+  let path = `M ${chartData.value[0].x} ${chartData.value[0].frameTimeY}`;
+  for (let i = 1; i < chartData.value.length; i++) {
+    path += ` L ${chartData.value[i].x} ${chartData.value[i].frameTimeY}`;
+  }
+  return path;
+});
+
 // Grid lines for FPS (left axis)
 const horizontalGridLinesFps = computed(() => {
   const lines = [];
@@ -478,9 +835,9 @@ const horizontalGridLinesFps = computed(() => {
   for (let i = 0; i <= 5; i++) {
     const fps = minFpsValue.value + step * i;
     const y =
-      chartHeight -
+      chartHeight.value -
       ((fps - minFpsValue.value) / (maxFpsValue.value - minFpsValue.value)) *
-        chartHeight;
+        chartHeight.value;
     lines.push({ y, fps });
   }
 
@@ -493,7 +850,7 @@ const horizontalGridLinesUsage = computed(() => {
 
   for (let i = 0; i <= 5; i++) {
     const usage = i * 20; // 0%, 20%, 40%, 60%, 80%, 100%
-    const y = chartHeight - (usage / 100) * chartHeight;
+    const y = chartHeight.value - (usage / 100) * chartHeight.value;
     lines.push({ y, usage });
   }
 
@@ -502,7 +859,7 @@ const horizontalGridLinesUsage = computed(() => {
 
 const verticalGridLines = computed(() => {
   const lines = [];
-  const step = chartWidth / 10;
+  const step = chartWidth.value / 10;
 
   for (let i = 0; i <= 10; i++) {
     lines.push({ x: i * step });
@@ -558,21 +915,15 @@ const formatTime = (index) => {
   const seconds = index % 60;
   return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
-
-const formatDuration = (minutes) => {
-  if (minutes < 60) {
-    return `${minutes}min`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}min`;
-};
 </script>
 
 <style scoped>
 .multi-axis-chart-container {
   width: 100%;
-  height: 500px;
+  height: 700px;
+  min-height: 650px;
+  display: flex;
+  flex-direction: column;
 }
 
 .no-data {
@@ -588,10 +939,23 @@ const formatDuration = (minutes) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .chart-header {
   flex-shrink: 0;
+}
+
+.legend-section {
+  flex-shrink: 0;
+  flex-grow: 0;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .app-details h4 {
@@ -623,7 +987,9 @@ const formatDuration = (minutes) => {
   background: #f9fafb;
   border-radius: 8px;
   padding: 1rem;
-  overflow: hidden;
+  padding-bottom: 1rem;
+  overflow: visible;
+  min-height: 0;
 }
 
 .line-chart-svg {
@@ -642,6 +1008,10 @@ const formatDuration = (minutes) => {
 
 .cpu-line {
   filter: drop-shadow(0 1px 2px rgba(249, 115, 22, 0.3));
+}
+
+.frametime-line {
+  filter: drop-shadow(0 1px 2px rgba(124, 58, 234, 0.3));
 }
 
 .chart-labels {
@@ -679,8 +1049,8 @@ const formatDuration = (minutes) => {
   position: absolute;
   left: 1rem;
   right: 1rem;
-  bottom: -25px;
-  height: 20px;
+  bottom: -40px;
+  height: 30px;
 }
 
 .x-label {
@@ -759,6 +1129,9 @@ const formatDuration = (minutes) => {
 .text-orange-600 {
   color: #ea580c;
 }
+.text-purple-600 {
+  color: #7c3aed;
+}
 .bg-green-500 {
   background-color: #10b981;
 }
@@ -767,6 +1140,9 @@ const formatDuration = (minutes) => {
 }
 .bg-orange-500 {
   background-color: #f97316;
+}
+.bg-purple-500 {
+  background-color: #7c3aed;
 }
 
 /* Visibility Controls */
@@ -820,6 +1196,12 @@ const formatDuration = (minutes) => {
   color: #c2410c;
 }
 
+.visibility-btn.frametime-btn.active {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
 .btn-color {
   width: 12px;
   height: 12px;
@@ -833,5 +1215,177 @@ const formatDuration = (minutes) => {
 
 .mt-2 {
   margin-top: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
+
+.text-gray-700 {
+  color: #374151;
+}
+
+/* Chart Title */
+.chart-title {
+  margin-bottom: 1rem;
+}
+
+/* Axis Labels */
+.axis-label {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  fill: #374151 !important;
+  font-weight: 600;
+}
+
+/* Chart Container */
+.line-chart-container {
+  position: relative;
+  margin: 0 auto;
+  padding: 0 60px;
+  padding-bottom: 40px;
+  width: 100%;
+  min-height: 400px;
+}
+
+/* SVG Chart */
+.line-chart-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  max-height: 500px;
+  overflow: visible;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .multi-axis-chart-container {
+    height: 620px;
+    min-height: 580px;
+  }
+
+  .line-chart-container {
+    padding: 0 40px;
+    padding-bottom: 30px;
+    min-height: 350px;
+  }
+
+  .legend-section {
+    max-height: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .multi-axis-chart-container {
+    height: 550px;
+    min-height: 520px;
+  }
+
+  .line-chart-container {
+    padding: 0 20px;
+    padding-bottom: 20px;
+    min-height: 300px;
+  }
+
+  .line-chart-svg {
+    min-height: 300px;
+    max-height: 350px;
+  }
+
+  .legend-section {
+    max-height: 160px;
+    padding: 0.75rem;
+  }
+
+  .chart-summary {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .summary-item {
+    min-width: 80px;
+    max-width: 120px;
+    padding: 0.5rem;
+  }
+}
+
+/* Chart Points */
+.chart-point {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+  animation: fadeInPoints 1s ease-out 0.5s forwards;
+}
+
+.chart-point:hover {
+  r: 5;
+  opacity: 1 !important;
+}
+
+.fps-point:hover {
+  filter: drop-shadow(0 0 8px #3b82f6);
+}
+
+.gpu-point:hover {
+  filter: drop-shadow(0 0 6px #10b981);
+}
+
+.cpu-point:hover {
+  filter: drop-shadow(0 0 6px #f97316);
+}
+
+.frametime-point:hover {
+  filter: drop-shadow(0 0 6px #7c3aed);
+}
+
+@keyframes fadeInPoints {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+/* Tooltip */
+.chart-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tooltip-value {
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+}
+
+.tooltip-time {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
 }
 </style>

@@ -8,7 +8,6 @@
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
           <h4 class="font-semibold">Températures</h4>
-
         </div>
       </div>
 

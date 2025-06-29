@@ -15,6 +15,7 @@
         <FileUpload
           @fps-file="handleFpsFileSelect"
           @hardware-file="handleHardwareFileSelect"
+          @frametime-file="handleFrametimeFileSelect"
           :is-loading="isLoading"
         />
         <div
@@ -156,6 +157,7 @@
               <AppTimelineChart
                 :data="analysisData.fpsData"
                 :hardwareData="analysisData.utilizationData"
+                :frametimeData="analysisData.frametimeData"
               />
             </div>
           </div>
@@ -253,6 +255,7 @@ import Papa from "papaparse";
 // State
 const fpsFile = ref(null);
 const hardwareFile = ref(null);
+const frametimeFile = ref(null);
 const isLoading = ref(false);
 const analysisData = ref(null);
 
@@ -273,9 +276,14 @@ const handleHardwareFileSelect = (file) => {
   hardwareFile.value = file;
 };
 
+const handleFrametimeFileSelect = (file) => {
+  frametimeFile.value = file;
+};
+
 const clearFiles = () => {
   fpsFile.value = null;
   hardwareFile.value = null;
+  frametimeFile.value = null;
   analysisData.value = null;
   // Reset chart visibility to all visible
   showCharts.value = {
@@ -302,6 +310,34 @@ const parseCSV = (file) => {
   });
 };
 
+// Parse FrameTime file
+const parseFrameTimeFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const lines = text.split("\n").filter((line) => line.trim());
+        // Skip header line and parse frame times
+        const frameTimeData = lines
+          .slice(1)
+          .map((line, index) => ({
+            index: index,
+            frameTime: parseFloat(line.trim()) / 1000, // Convert to milliseconds if in microseconds
+            timestamp: `Point ${index + 1}`,
+          }))
+          .filter((item) => !isNaN(item.frameTime));
+        resolve(frameTimeData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () =>
+      reject(new Error("Erreur lecture fichier FrameTime"));
+    reader.readAsText(file);
+  });
+};
+
 // Start analysis
 const startAnalysis = async () => {
   if (!fpsFile.value || !hardwareFile.value) return;
@@ -309,11 +345,18 @@ const startAnalysis = async () => {
   isLoading.value = true;
 
   try {
-    // Parse both CSV files
-    const [fpsData, hardwareData] = await Promise.all([
+    // Parse CSV files and optionally FrameTime file
+    const parsePromises = [
       parseCSV(fpsFile.value),
       parseCSV(hardwareFile.value),
-    ]);
+    ];
+
+    if (frametimeFile.value) {
+      parsePromises.push(parseFrameTimeFile(frametimeFile.value));
+    }
+
+    const results = await Promise.all(parsePromises);
+    const [fpsData, hardwareData, frametimeData] = results;
 
     // Process and analyze data
     const processedData = {
@@ -334,6 +377,7 @@ const startAnalysis = async () => {
           (row["CPU UTIL"] && !isNaN(parseFloat(row["CPU UTIL"]))) ||
           (row["SYS MEM UTIL"] && !isNaN(parseFloat(row["SYS MEM UTIL"])))
       ),
+      frametimeData: frametimeData || null,
     };
 
     // Calculate summary statistics
