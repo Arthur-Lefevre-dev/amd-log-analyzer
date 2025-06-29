@@ -1,115 +1,130 @@
 <template>
-  <div class="app-timeline-container">
+  <div class="fps-line-chart-container">
     <div v-if="!data || data.length === 0" class="no-data">
-      <p class="text-gray-500">Aucune donnée de timeline disponible</p>
+      <p class="text-gray-500">Aucune donnée FPS disponible</p>
     </div>
     <div v-else class="chart-wrapper">
       <!-- Chart Header -->
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
-          <h4 class="font-semibold">Timeline des Applications</h4>
-          <div class="chart-stats text-sm text-gray-600">
-            {{ data.length }} échantillons | App: {{ currentApp }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Application Info -->
-      <div class="app-info bg-blue-50 p-3 rounded-lg mb-4">
-        <div class="flex items-center gap-4">
-          <div class="app-icon">
-            <Icon name="lucide:gamepad-2" class="w-8 h-8 text-blue-600" />
-          </div>
           <div class="app-details">
-            <h3 class="font-bold text-lg text-blue-800">{{ currentApp }}</h3>
-            <p class="text-sm text-blue-600">
-              Session: {{ formatDuration(sessionDuration) }} | FPS Moyen:
-              {{ avgFps }} | Échantillons: {{ timelineData.length }}
+            <h4 class="font-semibold text-lg">{{ currentApp }}</h4>
+            <p class="text-sm text-gray-600">
+              {{ chartData.length }} échantillons | FPS Moyen: {{ avgFps }} |
+              Session: {{ formatDuration(sessionDuration) }}
             </p>
           </div>
-        </div>
-      </div>
-
-      <!-- Timeline Chart -->
-      <div class="timeline-chart">
-        <div
-          class="timeline-header flex justify-between text-xs text-gray-500 mb-2"
-        >
-          <span>{{ startTime }}</span>
-          <span>FPS au fil du temps</span>
-          <span>{{ endTime }}</span>
-        </div>
-
-        <div
-          class="timeline-area bg-gray-50 p-4 rounded relative"
-          style="height: 250px"
-        >
-          <!-- FPS Timeline -->
-          <div class="fps-timeline" v-if="timelineData.length > 0">
-            <div
-              v-for="(point, index) in timelineData"
-              :key="'timeline-' + index"
-              class="timeline-point"
-              :class="getFpsColorClass(point.fps)"
-              :style="getTimelinePointStyle(point, index)"
-              :title="getTooltipText(point)"
-            ></div>
-          </div>
-
-          <!-- Time markers -->
-          <div class="time-markers">
-            <div
-              v-for="marker in timeMarkers"
-              :key="marker.label"
-              class="time-marker"
-              :style="{ left: marker.position + '%' }"
-            >
-              <div class="marker-line"></div>
-              <div class="marker-label">{{ marker.label }}</div>
+          <div class="chart-legend flex gap-4 text-xs">
+            <div class="legend-item">
+              <div class="legend-color bg-green-500"></div>
+              <span>&gt; 60 FPS ({{ smoothPercentage }}%)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color bg-yellow-500"></div>
+              <span>30-60 FPS ({{ mediumPercentage }}%)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color bg-red-500"></div>
+              <span>&lt; 30 FPS ({{ lowPercentage }}%)</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- FPS Color Legend -->
-        <div class="fps-legend flex gap-4 mt-3 text-sm justify-center">
-          <div class="legend-item flex items-center">
-            <div class="w-3 h-3 bg-red-500 rounded mr-2"></div>
-            <span>&lt; 30 FPS</span>
+      <!-- Line Chart -->
+      <div class="line-chart-container">
+        <svg
+          class="line-chart-svg"
+          :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
+          preserveAspectRatio="none"
+        >
+          <!-- Grid Lines -->
+          <g class="grid-lines">
+            <!-- Horizontal grid lines (FPS levels) -->
+            <line
+              v-for="(line, index) in horizontalGridLines"
+              :key="'h-' + index"
+              :x1="0"
+              :y1="line.y"
+              :x2="chartWidth"
+              :y2="line.y"
+              stroke="#e5e7eb"
+              stroke-width="1"
+              stroke-dasharray="2,2"
+            />
+            <!-- Vertical grid lines (time) -->
+            <line
+              v-for="(line, index) in verticalGridLines"
+              :key="'v-' + index"
+              :x1="line.x"
+              :y1="0"
+              :x2="line.x"
+              :y2="chartHeight"
+              stroke="#e5e7eb"
+              stroke-width="1"
+              stroke-dasharray="2,2"
+            />
+          </g>
+
+          <!-- FPS Line Path -->
+          <path
+            :d="linePath"
+            fill="none"
+            stroke="#3b82f6"
+            stroke-width="2"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            class="fps-line"
+          />
+        </svg>
+
+        <!-- Chart Labels -->
+        <div class="chart-labels">
+          <!-- Y-axis labels (FPS) -->
+          <div class="y-labels">
+            <div
+              v-for="label in yAxisLabels"
+              :key="label.value"
+              class="y-label"
+              :style="{ top: label.position + '%' }"
+            >
+              {{ label.value }} FPS
+            </div>
           </div>
-          <div class="legend-item flex items-center">
-            <div class="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
-            <span>30-60 FPS</span>
-          </div>
-          <div class="legend-item flex items-center">
-            <div class="w-3 h-3 bg-green-500 rounded mr-2"></div>
-            <span>&gt; 60 FPS</span>
+
+          <!-- X-axis labels (Time) -->
+          <div class="x-labels">
+            <div
+              v-for="label in xAxisLabels"
+              :key="label.index"
+              class="x-label"
+              :style="{ left: label.position + '%' }"
+            >
+              {{ label.time }}
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Performance Summary -->
-      <div class="performance-summary mt-4 grid grid-cols-3 gap-4 text-center">
+      <div class="chart-summary mt-4 flex gap-4 text-center">
         <div class="summary-item">
-          <div class="text-lg font-bold text-green-600">
-            {{ smoothPercentage }}%
-          </div>
-          <div class="text-xs text-gray-500">
-            Performance Fluide (&gt;60 FPS)
-          </div>
+          <div class="text-lg font-bold text-green-600">{{ minFps }}</div>
+          <div class="text-xs text-gray-500">FPS Min</div>
         </div>
         <div class="summary-item">
-          <div class="text-lg font-bold text-yellow-600">
-            {{ mediumPercentage }}%
-          </div>
-          <div class="text-xs text-gray-500">
-            Performance Moyenne (30-60 FPS)
-          </div>
+          <div class="text-lg font-bold text-blue-600">{{ avgFps }}</div>
+          <div class="text-xs text-gray-500">FPS Moyen</div>
         </div>
         <div class="summary-item">
-          <div class="text-lg font-bold text-red-600">{{ lowPercentage }}%</div>
-          <div class="text-xs text-gray-500">
-            Performance Faible (&lt;30 FPS)
+          <div class="text-lg font-bold text-red-600">{{ maxFps }}</div>
+          <div class="text-xs text-gray-500">FPS Max</div>
+        </div>
+        <div class="summary-item">
+          <div class="text-lg font-bold text-purple-600">
+            {{ chartData.length }}
           </div>
+          <div class="text-xs text-gray-500">Échantillons</div>
         </div>
       </div>
     </div>
@@ -125,150 +140,188 @@ const props = defineProps({
   },
 });
 
-// Computed properties
-const timelineData = computed(() => {
-  const maxPoints = 100; // Limite pour la performance
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
+// Chart dimensions
+const chartWidth = 1000;
+const chartHeight = 300;
 
+// Computed properties
+const chartData = computed(() => {
+  // Prendre TOUS les échantillons sans limitation
   return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
     .map((item, index) => ({
       fps: parseFloat(item.FPS),
-      frameTime: parseFloat(item.FrameTime),
-      process: item.Process || "Unknown",
-      timestamp: item.Timestamp || `Point ${index + 1}`,
+      frameTime:
+        parseFloat(item["AVG FRAME TIME"]) || parseFloat(item.FrameTime) || 0,
+      process: item.PROCESS || "Unknown",
+      timestamp: item["TIME STAMP"] || item.Timestamp || `Point ${index + 1}`,
       index: index,
       raw: item,
     }))
-    .filter((point) => !isNaN(point.fps) && point.fps > 0);
+    .filter((point) => !isNaN(point.fps) && point.fps > 0)
+    .map((point, index, array) => {
+      // Calculate position
+      const x = (index / Math.max(1, array.length - 1)) * chartWidth;
+      const minFps = Math.min(...array.map((p) => p.fps));
+      const maxFps = Math.max(...array.map((p) => p.fps));
+      const y =
+        chartHeight - ((point.fps - minFps) / (maxFps - minFps)) * chartHeight;
+
+      return {
+        ...point,
+        x: x,
+        y: Math.max(5, Math.min(chartHeight - 5, y)), // Clamp to visible area
+      };
+    });
 });
 
 const currentApp = computed(() => {
   if (props.data.length === 0) return "Aucune application";
-  const firstProcess = props.data[0]?.Process || "Unknown";
-  // Nettoie le nom du processus (.exe, chemins, etc.)
+  const firstProcess = props.data[0]?.PROCESS || "Unknown";
   return firstProcess.replace(/\.exe$/i, "").replace(/.*[\\/]/, "");
 });
 
 const sessionDuration = computed(() => {
-  if (timelineData.value.length < 2) return 0;
-  // Estimation basée sur le nombre d'échantillons (généralement 1 par seconde)
-  return timelineData.value.length;
+  return Math.floor(chartData.value.length / 60); // Estimation en minutes
 });
 
-const startTime = computed(() => {
-  if (timelineData.value.length === 0) return "--:--";
-  const first = timelineData.value[0];
-  return formatTime(first.timestamp, 0);
+const fpsValues = computed(() => {
+  return chartData.value.map((point) => point.fps);
 });
 
-const endTime = computed(() => {
-  if (timelineData.value.length === 0) return "--:--";
-  const last = timelineData.value[timelineData.value.length - 1];
-  return formatTime(last.timestamp, timelineData.value.length - 1);
+const minFpsValue = computed(() => {
+  return fpsValues.value.length > 0 ? Math.min(...fpsValues.value) : 0;
+});
+
+const maxFpsValue = computed(() => {
+  return fpsValues.value.length > 0 ? Math.max(...fpsValues.value) : 100;
+});
+
+const minFps = computed(() => {
+  return minFpsValue.value.toFixed(1);
+});
+
+const maxFps = computed(() => {
+  return maxFpsValue.value.toFixed(1);
 });
 
 const avgFps = computed(() => {
-  if (timelineData.value.length === 0) return "0";
+  if (fpsValues.value.length === 0) return "0";
   const avg =
-    timelineData.value.reduce((sum, point) => sum + point.fps, 0) /
-    timelineData.value.length;
+    fpsValues.value.reduce((a, b) => a + b, 0) / fpsValues.value.length;
   return avg.toFixed(1);
-});
-
-const timeMarkers = computed(() => {
-  const markers = [];
-  const total = timelineData.value.length;
-  if (total === 0) return markers;
-
-  // Ajoute des marqueurs temporels à 25%, 50%, 75%
-  for (let i = 1; i <= 3; i++) {
-    const position = i * 25;
-    const dataIndex = Math.floor((total * i) / 4);
-    if (dataIndex < total) {
-      markers.push({
-        position: position,
-        label: formatTime(timelineData.value[dataIndex].timestamp, dataIndex),
-      });
-    }
-  }
-
-  return markers;
 });
 
 // Performance percentages
 const smoothPercentage = computed(() => {
-  if (timelineData.value.length === 0) return 0;
-  const smooth = timelineData.value.filter((p) => p.fps > 60).length;
-  return Math.round((smooth / timelineData.value.length) * 100);
+  if (chartData.value.length === 0) return 0;
+  const smooth = chartData.value.filter((p) => p.fps > 60).length;
+  return Math.round((smooth / chartData.value.length) * 100);
 });
 
 const mediumPercentage = computed(() => {
-  if (timelineData.value.length === 0) return 0;
-  const medium = timelineData.value.filter(
+  if (chartData.value.length === 0) return 0;
+  const medium = chartData.value.filter(
     (p) => p.fps >= 30 && p.fps <= 60
   ).length;
-  return Math.round((medium / timelineData.value.length) * 100);
+  return Math.round((medium / chartData.value.length) * 100);
 });
 
 const lowPercentage = computed(() => {
-  if (timelineData.value.length === 0) return 0;
-  const low = timelineData.value.filter((p) => p.fps < 30).length;
-  return Math.round((low / timelineData.value.length) * 100);
+  if (chartData.value.length === 0) return 0;
+  const low = chartData.value.filter((p) => p.fps < 30).length;
+  return Math.round((low / chartData.value.length) * 100);
+});
+
+// Line path for SVG
+const linePath = computed(() => {
+  if (chartData.value.length === 0) return "";
+
+  let path = `M ${chartData.value[0].x} ${chartData.value[0].y}`;
+
+  for (let i = 1; i < chartData.value.length; i++) {
+    path += ` L ${chartData.value[i].x} ${chartData.value[i].y}`;
+  }
+
+  return path;
+});
+
+// Grid lines
+const horizontalGridLines = computed(() => {
+  const lines = [];
+  const step = (maxFpsValue.value - minFpsValue.value) / 5;
+
+  for (let i = 0; i <= 5; i++) {
+    const fps = minFpsValue.value + step * i;
+    const y =
+      chartHeight -
+      ((fps - minFpsValue.value) / (maxFpsValue.value - minFpsValue.value)) *
+        chartHeight;
+    lines.push({ y, fps });
+  }
+
+  return lines;
+});
+
+const verticalGridLines = computed(() => {
+  const lines = [];
+  const step = chartWidth / 10;
+
+  for (let i = 0; i <= 10; i++) {
+    lines.push({ x: i * step });
+  }
+
+  return lines;
+});
+
+// Axis labels
+const yAxisLabels = computed(() => {
+  const labels = [];
+  const step = (maxFpsValue.value - minFpsValue.value) / 5;
+
+  for (let i = 0; i <= 5; i++) {
+    const value = Math.round(minFpsValue.value + step * i);
+    const position = 100 - i * 20; // Inverse position for top-to-bottom
+    labels.push({ value, position });
+  }
+
+  return labels;
+});
+
+const xAxisLabels = computed(() => {
+  const labels = [];
+  const totalPoints = chartData.value.length;
+  const step = totalPoints / 5;
+
+  for (let i = 0; i <= 5; i++) {
+    const index = Math.round(i * step);
+    const position = (i / 5) * 100;
+    const time = formatTime(index);
+    labels.push({ index, position, time });
+  }
+
+  return labels;
 });
 
 // Methods
-const getTimelinePointStyle = (point, index) => {
-  const x = (index / Math.max(1, timelineData.value.length - 1)) * 100;
-  const maxFps = Math.max(...timelineData.value.map((p) => p.fps));
-  const minFps = Math.min(...timelineData.value.map((p) => p.fps));
-  const range = maxFps - minFps;
 
-  let y = 50; // Valeur par défaut au milieu
-  if (range > 0) {
-    y = 90 - ((point.fps - minFps) / range) * 80; // Inverse Y (haut = plus de FPS)
-  }
-
-  return {
-    position: "absolute",
-    left: x + "%",
-    top: y + "%",
-    transform: "translate(-50%, -50%)",
-  };
-};
-
-const getFpsColorClass = (fps) => {
-  if (fps >= 60) return "fps-high";
-  if (fps >= 30) return "fps-medium";
-  return "fps-low";
-};
-
-const getTooltipText = (point) => {
-  return `${point.fps} FPS | ${point.frameTime}ms | ${point.process} | ${formatTime(point.timestamp, point.index)}`;
-};
-
-const formatTime = (timestamp, index) => {
-  // Si on a un vrai timestamp, on l'utilise
-  if (timestamp && timestamp !== `Point ${index + 1}`) {
-    return timestamp;
-  }
-
-  // Sinon on simule le temps basé sur l'index (1 seconde par échantillon)
+const formatTime = (index) => {
   const minutes = Math.floor(index / 60);
   const seconds = index % 60;
   return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const formatDuration = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
+const formatDuration = (minutes) => {
+  if (minutes < 60) {
+    return `${minutes}min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}min`;
 };
 </script>
 
 <style scoped>
-.app-timeline-container {
+.fps-line-chart-container {
   width: 100%;
   height: 500px;
 }
@@ -284,138 +337,148 @@ const formatDuration = (seconds) => {
 
 .chart-wrapper {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.app-info {
-  border-left: 4px solid #2563eb;
-}
-
-.app-icon {
+.chart-header {
   flex-shrink: 0;
 }
 
-.timeline-area {
-  position: relative;
-  overflow: hidden;
+.app-details h4 {
+  color: #1f2937;
+  margin-bottom: 0.25rem;
 }
 
-.fps-timeline {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.timeline-point {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.timeline-point:hover {
-  transform: translate(-50%, -50%) scale(1.5);
-  z-index: 10;
-}
-
-.fps-high {
-  background-color: #10b981;
-}
-
-.fps-medium {
-  background-color: #f59e0b;
-}
-
-.fps-low {
-  background-color: #ef4444;
-}
-
-.time-markers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.time-marker {
-  position: absolute;
-  top: 0;
-  height: 100%;
-}
-
-.marker-line {
-  width: 1px;
-  height: 100%;
-  background-color: #d1d5db;
-  opacity: 0.5;
-}
-
-.marker-label {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.75rem;
-  color: #6b7280;
-  background-color: white;
-  padding: 2px 4px;
-  border-radius: 3px;
-  white-space: nowrap;
-}
-
-.timeline-header {
-  font-weight: 500;
-}
-
-.fps-legend {
+.chart-legend {
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.line-chart-container {
+  flex: 1;
+  position: relative;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.line-chart-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.fps-line {
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
+}
+
+.chart-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.y-labels {
+  position: absolute;
+  left: -40px;
+  top: 1rem;
+  bottom: 1rem;
+}
+
+.y-label {
+  position: absolute;
+  font-size: 0.75rem;
+  color: #6b7280;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.x-labels {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: -25px;
+  height: 20px;
+}
+
+.x-label {
+  position: absolute;
+  font-size: 0.75rem;
+  color: #6b7280;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .summary-item {
-  padding: 0.5rem;
-  background-color: #f9fafb;
-  border-radius: 0.375rem;
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+  background: rgba(249, 250, 251, 0.8);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  backdrop-filter: blur(5px);
 }
 
-.w-3 {
-  width: 0.75rem;
+.flex {
+  display: flex;
 }
-.h-3 {
-  height: 0.75rem;
+.justify-between {
+  justify-content: space-between;
 }
-.w-8 {
-  width: 2rem;
+.items-center {
+  align-items: center;
 }
-.h-8 {
-  height: 2rem;
+.gap-4 {
+  gap: 1rem;
 }
-.bg-red-500 {
-  background-color: #ef4444;
+.mb-4 {
+  margin-bottom: 1rem;
 }
-.bg-yellow-500 {
-  background-color: #f59e0b;
+.mt-4 {
+  margin-top: 1rem;
 }
-.bg-green-500 {
-  background-color: #10b981;
+.text-center {
+  text-align: center;
 }
-.text-red-600 {
-  color: #dc2626;
+.text-sm {
+  font-size: 0.875rem;
 }
-.text-yellow-600 {
-  color: #d97706;
+.text-xs {
+  font-size: 0.75rem;
+}
+.text-lg {
+  font-size: 1.125rem;
+}
+.font-semibold {
+  font-weight: 600;
+}
+.font-bold {
+  font-weight: 700;
+}
+.text-gray-500 {
+  color: #6b7280;
+}
+.text-gray-600 {
+  color: #4b5563;
 }
 .text-green-600 {
   color: #059669;
@@ -423,16 +486,19 @@ const formatDuration = (seconds) => {
 .text-blue-600 {
   color: #2563eb;
 }
-.text-blue-800 {
-  color: #1e40af;
+.text-red-600 {
+  color: #dc2626;
 }
-.bg-blue-50 {
-  background-color: #eff6ff;
+.text-purple-600 {
+  color: #7c3aed;
 }
-.text-xs {
-  font-size: 0.75rem;
+.bg-green-500 {
+  background-color: #10b981;
 }
-.rounded {
-  border-radius: 0.25rem;
+.bg-yellow-500 {
+  background-color: #f59e0b;
+}
+.bg-red-500 {
+  background-color: #ef4444;
 }
 </style>
