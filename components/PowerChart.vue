@@ -7,76 +7,49 @@
       <!-- Chart Header -->
       <div class="chart-header mb-4">
         <div class="flex justify-between items-center">
-          <h4 class="font-semibold">Consommation</h4>
-        </div>
-      </div>
-
-      <!-- Power Area Chart -->
-      <div class="simple-chart">
-        <div
-          class="chart-area bg-gray-50 p-4 rounded relative"
-          style="height: 200px"
-        >
-          <!-- GPU Power Area -->
-          <div class="power-area gpu-power" v-if="gpuPowerPoints.length > 0">
-            <div
-              v-for="(point, index) in gpuPowerPoints"
-              :key="'gpu-power-' + index"
-              class="power-bar bg-yellow-500"
-              :style="
-                getBarStyle(point.power, index, gpuPowerPoints.length, 'gpu')
-              "
-              :title="`GPU: ${point.power}W`"
-            ></div>
-          </div>
-
-          <!-- CPU Power Area -->
-          <div class="power-area cpu-power" v-if="cpuPowerPoints.length > 0">
-            <div
-              v-for="(point, index) in cpuPowerPoints"
-              :key="'cpu-power-' + index"
-              class="power-bar bg-orange-500"
-              :style="
-                getBarStyle(point.power, index, cpuPowerPoints.length, 'cpu')
-              "
-              :title="`CPU: ${point.power}W`"
-            ></div>
-          </div>
-        </div>
-
-        <!-- Legend -->
-        <div class="chart-legend flex gap-4 mt-2 text-sm justify-center">
-          <div class="legend-item flex items-center">
-            <div class="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
-            <span>GPU ({{ avgGpuPower }}W)</span>
-          </div>
-          <div class="legend-item flex items-center">
-            <div class="w-3 h-3 bg-orange-500 rounded mr-2"></div>
-            <span>CPU ({{ avgCpuPower }}W)</span>
+          <div class="stats-summary text-sm text-gray-600">
+            <span>Max GPU: {{ maxGpuPower }}W</span>
+            <span class="ml-3">Max CPU: {{ maxCpuPower }}W</span>
+            <span class="ml-3">GPU Util: {{ maxGpuUtil }}%</span>
+            <span class="ml-3">CPU Util: {{ maxCpuUtil }}%</span>
           </div>
         </div>
       </div>
 
-      <!-- Power Summary -->
-      <div class="chart-summary mt-4 flex gap-4 text-center">
-        <div class="summary-item">
-          <div class="text-lg font-bold text-yellow-600">
-            {{ maxGpuPower }}W
-          </div>
-          <div class="text-xs text-gray-500">GPU Max</div>
-        </div>
-        <div class="summary-item">
-          <div class="text-lg font-bold text-orange-600">
-            {{ maxCpuPower }}W
-          </div>
-          <div class="text-xs text-gray-500">CPU Max</div>
-        </div>
+      <!-- Chart.js Chart -->
+      <div class="chart-container" style="height: 350px; position: relative">
+        <Bar ref="chart" :data="chartData" :options="chartOptions" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "vue-chartjs";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
 // Props
 const props = defineProps({
   data: {
@@ -85,122 +58,255 @@ const props = defineProps({
   },
 });
 
-// Computed properties
-const gpuPowerValues = computed(() => {
-  return props.data
-    .map((item) => parseFloat(item["GPU BRD PWR"]))
-    .filter((power) => !isNaN(power) && power > 0);
-});
-
-const cpuPowerValues = computed(() => {
-  return props.data
-    .map((item) => {
-      // Try multiple possible column names for CPU power
-      const cpuPower =
-        parseFloat(item["CPU POWER"]) ||
-        parseFloat(item["CPU PWR"]) ||
-        parseFloat(item["CPU_POWER"]) ||
-        parseFloat(item["CPU_PWR"]) ||
-        0;
-      return cpuPower;
-    })
-    .filter((power) => !isNaN(power) && power > 0);
-});
-
-const gpuPowerPoints = computed(() => {
-  const maxPoints = 40;
+// Computed properties for data processing
+const processedData = computed(() => {
+  const maxPoints = 50;
   const step = Math.max(1, Math.floor(props.data.length / maxPoints));
 
   return props.data
     .filter((_, index) => index % step === 0)
     .slice(0, maxPoints)
-    .map((item) => ({
-      power: parseFloat(item["GPU BRD PWR"]),
-      raw: item,
+    .map((item, index) => ({
+      index,
+      gpuPower: parseFloat(item["GPU BRD PWR"]) || 0,
+      cpuPower:
+        parseFloat(item["CPU POWER"]) || parseFloat(item["CPU PWR"]) || 0,
+      gpuUtil: parseFloat(item["GPU UTIL"]) || 0,
+      cpuUtil: parseFloat(item["CPU UTIL"]) || 0,
+      timestamp: item["DATE"] || `Point ${index + 1}`,
     }))
-    .filter((point) => !isNaN(point.power) && point.power > 0);
+    .filter(
+      (point) =>
+        point.gpuPower > 0 ||
+        point.cpuPower > 0 ||
+        point.gpuUtil > 0 ||
+        point.cpuUtil > 0
+    );
 });
 
-const cpuPowerPoints = computed(() => {
-  const maxPoints = 40;
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
+// Chart data configuration
+const chartData = computed(() => ({
+  labels: processedData.value.map((point) => point.timestamp),
+  datasets: [
+    // Bar datasets for power consumption
+    {
+      type: "bar",
+      label: "GPU POWER",
+      data: processedData.value.map((point) => point.gpuPower),
+      backgroundColor: "rgba(234, 179, 8, 0.7)",
+      borderColor: "rgba(234, 179, 8, 1)",
+      borderWidth: 1,
+      yAxisID: "y",
+      order: 3,
+    },
+    {
+      type: "bar",
+      label: "CPU POWER",
+      data: processedData.value.map((point) => point.cpuPower),
+      backgroundColor: "rgba(249, 115, 22, 0.7)",
+      borderColor: "rgba(249, 115, 22, 1)",
+      borderWidth: 1,
+      yAxisID: "y",
+      order: 4,
+    },
+    // Line datasets for utilization
+    {
+      type: "line",
+      label: "GPU UTIL",
+      data: processedData.value.map((point) => point.gpuUtil),
+      borderColor: "rgba(168, 85, 247, 1)",
+      backgroundColor: "rgba(168, 85, 247, 0.1)",
+      borderWidth: 2,
+      fill: false,
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: "rgba(168, 85, 247, 1)",
+      yAxisID: "y1",
+      order: 1,
+    },
+    {
+      type: "line",
+      label: "CPU UTIL",
+      data: processedData.value.map((point) => point.cpuUtil),
+      borderColor: "rgba(59, 130, 246, 1)",
+      backgroundColor: "rgba(59, 130, 246, 0.1)",
+      borderWidth: 2,
+      fill: false,
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: "rgba(59, 130, 246, 1)",
+      yAxisID: "y1",
+      order: 2,
+    },
+  ],
+}));
 
-  return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
-    .map((item) => ({
-      // Try multiple possible column names for CPU power
-      power:
-        parseFloat(item["CPU POWER"]) ||
-        parseFloat(item["CPU PWR"]) ||
-        parseFloat(item["CPU_POWER"]) ||
-        parseFloat(item["CPU_PWR"]) ||
-        0,
-      raw: item,
-    }))
-    .filter((point) => !isNaN(point.power) && point.power > 0);
-});
+// Chart options configuration
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: {
+    mode: "index",
+    intersect: false,
+  },
+  plugins: {
+    title: {
+      display: false,
+    },
+    legend: {
+      display: true,
+      position: "top",
+      labels: {
+        usePointStyle: true,
+        padding: 20,
+        font: {
+          size: 12,
+        },
+      },
+    },
+    tooltip: {
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      titleColor: "#fff",
+      bodyColor: "#fff",
+      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderWidth: 1,
+      cornerRadius: 8,
+      displayColors: true,
+      callbacks: {
+        label: function (context) {
+          const label = context.dataset.label || "";
+          const value = context.parsed.y;
+          if (label === "GPU POWER" || label === "CPU POWER") {
+            return `${label}: ${value}W`;
+          } else if (label === "GPU UTIL" || label === "CPU UTIL") {
+            return `${label}: ${value}%`;
+          } else {
+            return `${label}: ${value}`;
+          }
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      display: true,
+      title: {
+        display: true,
+        text: "Temps",
+        font: {
+          size: 14,
+          weight: "bold",
+        },
+      },
+      ticks: {
+        maxTicksLimit: 10,
+        font: {
+          size: 11,
+        },
+      },
+    },
+    y: {
+      type: "linear",
+      display: true,
+      position: "left",
+      title: {
+        display: true,
+        text: "Consommation (W)",
+        color: "rgba(234, 179, 8, 1)",
+        font: {
+          size: 14,
+          weight: "bold",
+        },
+      },
+      ticks: {
+        callback: function (value) {
+          return value + "W";
+        },
+        color: "rgba(234, 179, 8, 0.8)",
+        font: {
+          size: 11,
+        },
+      },
+      grid: {
+        color: "rgba(0, 0, 0, 0.1)",
+      },
+    },
+    y1: {
+      type: "linear",
+      display: true,
+      position: "right",
+      title: {
+        display: true,
+        text: "Utilisation (%)",
+        color: "rgba(168, 85, 247, 1)",
+        font: {
+          size: 14,
+          weight: "bold",
+        },
+      },
+      min: 0,
+      max: 100,
+      ticks: {
+        callback: function (value) {
+          return value + "%";
+        },
+        color: "rgba(168, 85, 247, 0.8)",
+        font: {
+          size: 11,
+        },
+      },
+      grid: {
+        drawOnChartArea: false,
+      },
+    },
+  },
+  elements: {
+    bar: {
+      borderRadius: 2,
+    },
+    point: {
+      radius: 3,
+      hoverRadius: 5,
+    },
+  },
+}));
 
+// Statistics
 const maxGpuPower = computed(() => {
-  return gpuPowerValues.value.length > 0
-    ? Math.max(...gpuPowerValues.value).toFixed(0)
-    : "0";
+  const powers = processedData.value
+    .map((p) => p.gpuPower)
+    .filter((p) => p > 0);
+  return powers.length > 0 ? Math.max(...powers).toFixed(0) : "0";
 });
 
 const maxCpuPower = computed(() => {
-  return cpuPowerValues.value.length > 0
-    ? Math.max(...cpuPowerValues.value).toFixed(0)
-    : "0";
+  const powers = processedData.value
+    .map((p) => p.cpuPower)
+    .filter((p) => p > 0);
+  return powers.length > 0 ? Math.max(...powers).toFixed(0) : "0";
 });
 
-const avgGpuPower = computed(() => {
-  if (gpuPowerValues.value.length === 0) return "0";
-  const avg =
-    gpuPowerValues.value.reduce((a, b) => a + b, 0) /
-    gpuPowerValues.value.length;
-  return avg.toFixed(0);
+const maxGpuUtil = computed(() => {
+  const utils = processedData.value.map((p) => p.gpuUtil).filter((u) => u > 0);
+  return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
-const avgCpuPower = computed(() => {
-  if (cpuPowerValues.value.length === 0) return "0";
-  const avg =
-    cpuPowerValues.value.reduce((a, b) => a + b, 0) /
-    cpuPowerValues.value.length;
-  return avg.toFixed(0);
+const maxCpuUtil = computed(() => {
+  const utils = processedData.value.map((p) => p.cpuUtil).filter((u) => u > 0);
+  return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
-
-const powerRange = computed(() => {
-  const allPowers = [...gpuPowerValues.value, ...cpuPowerValues.value];
-  if (allPowers.length === 0) return { min: 0, max: 300 };
-
-  return {
-    min: 0, // Start from 0 for power consumption
-    max: Math.max(...allPowers),
-  };
-});
-
-// Methods
-const getBarStyle = (power, index, totalPoints, type) => {
-  const x = (index / Math.max(1, totalPoints - 1)) * 100;
-  const height = (power / powerRange.value.max) * 80; // Réduit la hauteur pour éviter les débordements
-  const width = Math.max(0.8, 100 / totalPoints - 0.5); // Réduit la largeur pour éviter les chevauchements
-
-  return {
-    position: "absolute",
-    left: x + "%",
-    bottom: "0%", // Tous les barres partent du bas
-    width: width + "%",
-    height: height + "%",
-    opacity: type === "cpu" ? "0.6" : "0.8", // CPU plus transparent pour voir la superposition
-    zIndex: type === "gpu" ? "2" : "1", // GPU au-dessus
-  };
-};
 </script>
 
 <style scoped>
 .power-chart-container {
   width: 100%;
-  height: 400px;
+  height: 450px;
+  padding: 1rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .no-data {
@@ -214,69 +320,52 @@ const getBarStyle = (power, index, totalPoints, type) => {
 
 .chart-wrapper {
   height: 100%;
-}
-
-.chart-area {
-  position: relative;
-  overflow: hidden;
-}
-
-.power-area {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.power-bar {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.power-bar:hover {
-  opacity: 1 !important;
-  transform: scaleY(1.05);
-}
-
-.chart-legend {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
 }
 
-.legend-item {
+.chart-header {
+  flex-shrink: 0;
+}
+
+.chart-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.ml-3 {
+  margin-left: 0.75rem;
+}
+
+.flex {
   display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
   align-items: center;
-}
-
-.summary-item {
-  padding: 0.5rem;
-  background-color: #f9fafb;
-  border-radius: 0.375rem;
-}
-
-.w-3 {
-  width: 0.75rem;
-}
-.h-3 {
-  height: 0.75rem;
-}
-.bg-yellow-500 {
-  background-color: #eab308;
-}
-.bg-orange-500 {
-  background-color: #f97316;
-}
-.text-yellow-600 {
-  color: #ca8a04;
-}
-.text-orange-600 {
-  color: #ea580c;
-}
-.text-xs {
-  font-size: 0.75rem;
-}
-.rounded {
-  border-radius: 0.25rem;
 }
 </style>
