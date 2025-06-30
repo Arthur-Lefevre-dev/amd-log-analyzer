@@ -250,8 +250,6 @@
 </template>
 
 <script setup>
-import Papa from "papaparse";
-
 // State
 const fpsFile = ref(null);
 const hardwareFile = ref(null);
@@ -295,8 +293,11 @@ const clearFiles = () => {
 };
 
 // Parse CSV files
-const parseCSV = (file) => {
-  return new Promise((resolve, reject) => {
+const parseCSV = async (file) => {
+  return new Promise(async (resolve, reject) => {
+    // Dynamic import for client-side only
+    const Papa = await import("papaparse").then((module) => module.default);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
