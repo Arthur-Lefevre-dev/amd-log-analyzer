@@ -4,11 +4,10 @@
     <div class="upload-instructions">
       <Icon name="lucide:file-text" class="instruction-icon" />
       <h3 class="instruction-title">
-        Sélectionnez vos fichiers AMD Adrenaline
+        {{ $t("upload.instructions.title") }}
       </h3>
       <p class="instruction-text">
-        Chargez les fichiers générés par AMD Adrenaline pour analyser vos
-        performances gaming (CSV requis, FrameTime optionnel)
+        {{ $t("upload.instructions.description") }}
       </p>
     </div>
 
@@ -18,8 +17,10 @@
       <div class="upload-card fps-card">
         <div class="upload-header">
           <Icon name="lucide:activity" class="upload-icon" />
-          <h4 class="upload-title">Fichier FPS/Latency</h4>
-          <span class="upload-badge required">Requis</span>
+          <h4 class="upload-title">{{ $t("upload.fps.title") }}</h4>
+          <span class="upload-badge required">{{
+            $t("upload.status.required")
+          }}</span>
         </div>
 
         <div
@@ -38,16 +39,16 @@
           <div v-if="!fpsFile" class="upload-placeholder">
             <Icon name="lucide:upload-cloud" class="placeholder-icon" />
             <div class="placeholder-text">
-              <p class="placeholder-main">Glissez votre fichier FPS ici</p>
-              <p class="placeholder-sub">ou cliquez pour sélectionner</p>
-              <p class="placeholder-format">Format: FPS.Latency.*.CSV</p>
+              <p class="placeholder-main">{{ $t("upload.fps.dragText") }}</p>
+              <p class="placeholder-sub">{{ $t("upload.fps.clickText") }}</p>
+              <p class="placeholder-format">{{ $t("upload.fps.format") }}</p>
             </div>
           </div>
 
           <div v-else class="upload-success">
             <Icon name="lucide:check-circle" class="success-icon" />
             <div class="success-content">
-              <p class="success-title">Fichier FPS chargé</p>
+              <p class="success-title">{{ $t("upload.fps.loaded") }}</p>
               <p class="success-filename">{{ fpsFile.name }}</p>
               <p class="success-size">{{ formatFileSize(fpsFile.size) }}</p>
             </div>
@@ -62,8 +63,10 @@
       <div class="upload-card hardware-card">
         <div class="upload-header">
           <Icon name="lucide:cpu" class="upload-icon" />
-          <h4 class="upload-title">Fichier Hardware</h4>
-          <span class="upload-badge required">Requis</span>
+          <h4 class="upload-title">{{ $t("upload.hardware.title") }}</h4>
+          <span class="upload-badge required">{{
+            $t("upload.status.required")
+          }}</span>
         </div>
 
         <div
@@ -82,16 +85,22 @@
           <div v-if="!hardwareFile" class="upload-placeholder">
             <Icon name="lucide:upload-cloud" class="placeholder-icon" />
             <div class="placeholder-text">
-              <p class="placeholder-main">Glissez votre fichier Hardware ici</p>
-              <p class="placeholder-sub">ou cliquez pour sélectionner</p>
-              <p class="placeholder-format">Format: Hardware.*.CSV</p>
+              <p class="placeholder-main">
+                {{ $t("upload.hardware.dragText") }}
+              </p>
+              <p class="placeholder-sub">
+                {{ $t("upload.hardware.clickText") }}
+              </p>
+              <p class="placeholder-format">
+                {{ $t("upload.hardware.format") }}
+              </p>
             </div>
           </div>
 
           <div v-else class="upload-success">
             <Icon name="lucide:check-circle" class="success-icon" />
             <div class="success-content">
-              <p class="success-title">Fichier Hardware chargé</p>
+              <p class="success-title">{{ $t("upload.hardware.loaded") }}</p>
               <p class="success-filename">{{ hardwareFile.name }}</p>
               <p class="success-size">
                 {{ formatFileSize(hardwareFile.size) }}
@@ -108,8 +117,10 @@
       <div class="upload-card frametime-card">
         <div class="upload-header">
           <Icon name="lucide:clock" class="upload-icon" />
-          <h4 class="upload-title">Fichier FrameTime</h4>
-          <span class="upload-badge optional">Optionnel</span>
+          <h4 class="upload-title">{{ $t("upload.frametime.title") }}</h4>
+          <span class="upload-badge optional">{{
+            $t("upload.status.optional")
+          }}</span>
         </div>
 
         <div
@@ -129,17 +140,21 @@
             <Icon name="lucide:upload-cloud" class="placeholder-icon" />
             <div class="placeholder-text">
               <p class="placeholder-main">
-                Glissez votre fichier FrameTime ici
+                {{ $t("upload.frametime.dragText") }}
               </p>
-              <p class="placeholder-sub">ou cliquez pour sélectionner</p>
-              <p class="placeholder-format">Format: *.FrameTime</p>
+              <p class="placeholder-sub">
+                {{ $t("upload.frametime.clickText") }}
+              </p>
+              <p class="placeholder-format">
+                {{ $t("upload.frametime.format") }}
+              </p>
             </div>
           </div>
 
           <div v-else class="upload-success">
             <Icon name="lucide:check-circle" class="success-icon" />
             <div class="success-content">
-              <p class="success-title">Fichier FrameTime chargé</p>
+              <p class="success-title">{{ $t("upload.frametime.loaded") }}</p>
               <p class="success-filename">{{ frametimeFile.name }}</p>
               <p class="success-size">
                 {{ formatFileSize(frametimeFile.size) }}
@@ -178,16 +193,18 @@
           <Icon name="lucide:clock" class="status-icon" />
           <span>FrameTime</span>
           <Icon v-if="frametimeFile" name="lucide:check" class="status-check" />
-          <span v-else class="status-optional-text">(optionnel)</span>
+          <span v-else class="status-optional-text"
+            >({{ $t("upload.status.optional").toLowerCase() }})</span
+          >
         </div>
       </div>
 
       <div v-if="fpsFile && hardwareFile" class="status-ready">
         <Icon name="lucide:check-circle" class="ready-icon" />
-        <span class="ready-text">Prêt pour l'analyse !</span>
-        <span v-if="frametimeFile" class="ready-bonus"
-          >+ FrameTime détaillé</span
-        >
+        <span class="ready-text">{{ $t("analysis.ready") }}</span>
+        <span v-if="frametimeFile" class="ready-bonus">{{
+          $t("upload.frametime.detailed")
+        }}</span>
       </div>
     </div>
 
@@ -195,7 +212,7 @@
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-content">
         <div class="loading-spinner"></div>
-        <p class="loading-text">Préparation de l'analyse...</p>
+        <p class="loading-text">{{ $t("analysis.preparing") }}</p>
       </div>
     </div>
 
@@ -786,4 +803,3 @@ onMounted(() => {
   height: 1rem;
 }
 </style>
- 

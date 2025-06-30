@@ -1,248 +1,232 @@
 <template>
-  <div class="dashboard-container">
-    <div class="dashboard-content">
-      <!-- Header -->
-      <div class="dashboard-header">
-        <h1 class="dashboard-title">AMD Log Analyzer</h1>
-        <p class="dashboard-subtitle">
-          Analysez vos performances gaming avec AMD Adrenaline
-        </p>
-      </div>
-
-      <!-- Upload Section (visible when no data) -->
-      <div v-if="!analysisData" class="upload-section">
-        <h2 class="text-2xl font-bold mb-6 text-center">Commencer l'Analyse</h2>
-        <FileUpload
-          @fps-file="handleFpsFileSelect"
-          @hardware-file="handleHardwareFileSelect"
-          @frametime-file="handleFrametimeFileSelect"
-          :is-loading="isLoading"
-        />
-        <div
-          v-if="(fpsFile || hardwareFile) && !isLoading"
-          class="flex justify-center mt-6"
+  <div class="page-content">
+    <!-- Upload Section (visible when no data) -->
+    <div v-if="!analysisData" class="upload-section">
+      <h2 class="text-2xl font-bold mb-6 text-center">
+        {{ $t("analysis.start") }}
+      </h2>
+      <FileUpload
+        @fps-file="handleFpsFileSelect"
+        @hardware-file="handleHardwareFileSelect"
+        @frametime-file="handleFrametimeFileSelect"
+        :is-loading="isLoading"
+      />
+      <div
+        v-if="(fpsFile || hardwareFile) && !isLoading"
+        class="flex justify-center mt-6"
+      >
+        <button
+          @click="startAnalysis"
+          :disabled="!fpsFile || !hardwareFile"
+          class="btn btn-primary"
         >
+          <Icon name="lucide:play-circle" class="w-5 h-5" />
+          {{ $t("analysis.launch") }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Analysis Results -->
+    <div v-else>
+      <!-- Action Bar -->
+      <div class="control-panel">
+        <div class="flex justify-between items-center">
+          <h3 class="control-title">{{ $t("controls.title") }}</h3>
+          <button @click="clearFiles" class="btn btn-outline">
+            <Icon name="lucide:refresh-cw" class="w-4 h-4" />
+            {{ $t("analysis.new") }}
+          </button>
+        </div>
+        <div class="control-buttons">
           <button
-            @click="startAnalysis"
-            :disabled="!fpsFile || !hardwareFile"
-            class="btn btn-primary"
+            @click="showCharts.timeline = !showCharts.timeline"
+            :class="['control-button', { active: showCharts.timeline }]"
           >
-            <Icon name="lucide:play-circle" class="w-5 h-5" />
-            Lancer l'Analyse
+            <Icon name="lucide:activity" class="w-4 h-4" />
+            {{ $t("controls.performance") }}
+          </button>
+          <button
+            @click="showCharts.temperature = !showCharts.temperature"
+            :class="['control-button', { active: showCharts.temperature }]"
+          >
+            <Icon name="lucide:thermometer" class="w-4 h-4" />
+            {{ $t("controls.temperatures") }}
+          </button>
+          <button
+            @click="showCharts.power = !showCharts.power"
+            :class="['control-button', { active: showCharts.power }]"
+          >
+            <Icon name="lucide:zap" class="w-4 h-4" />
+            {{ $t("controls.power") }}
+          </button>
+          <button
+            @click="showCharts.utilization = !showCharts.utilization"
+            :class="['control-button', { active: showCharts.utilization }]"
+          >
+            <Icon name="lucide:bar-chart-3" class="w-4 h-4" />
+            {{ $t("controls.utilization") }}
           </button>
         </div>
       </div>
 
-      <!-- Analysis Results -->
-      <div v-else>
-        <!-- Action Bar -->
-        <div class="control-panel">
-          <div class="flex justify-between items-center">
-            <h3 class="control-title">Contrôles d'Affichage</h3>
-            <button @click="clearFiles" class="btn btn-outline">
-              <Icon name="lucide:refresh-cw" class="w-4 h-4" />
-              Nouvelle Analyse
-            </button>
+      <!-- Key Metrics -->
+      <div class="metrics-grid">
+        <div
+          class="metric-card"
+          style="--accent-color: #10b981; --accent-color-light: #34d399"
+        >
+          <div class="metric-value">
+            {{ analysisData.avgFps?.toFixed(1) || "N/A" }}
           </div>
-          <div class="control-buttons">
-            <button
-              @click="showCharts.timeline = !showCharts.timeline"
-              :class="['control-button', { active: showCharts.timeline }]"
-            >
-              <Icon name="lucide:activity" class="w-4 h-4" />
-              Performance FPS
-            </button>
-            <button
-              @click="showCharts.temperature = !showCharts.temperature"
-              :class="['control-button', { active: showCharts.temperature }]"
-            >
-              <Icon name="lucide:thermometer" class="w-4 h-4" />
-              Températures
-            </button>
-            <button
-              @click="showCharts.power = !showCharts.power"
-              :class="['control-button', { active: showCharts.power }]"
-            >
-              <Icon name="lucide:zap" class="w-4 h-4" />
-              Consommation
-            </button>
-            <button
-              @click="showCharts.utilization = !showCharts.utilization"
-              :class="['control-button', { active: showCharts.utilization }]"
-            >
-              <Icon name="lucide:bar-chart-3" class="w-4 h-4" />
-              Utilisation
-            </button>
+          <div class="metric-label">{{ $t("metrics.avgFps") }}</div>
+          <div class="metric-trend" style="background: #dcfce7; color: #16a34a">
+            {{ $t("metrics.gaming") }}
+          </div>
+        </div>
+        <div
+          class="metric-card"
+          style="--accent-color: #ef4444; --accent-color-light: #f87171"
+        >
+          <div class="metric-value">
+            {{ analysisData.maxGpuTemp?.toFixed(0) || "N/A" }}°
+          </div>
+          <div class="metric-label">{{ $t("metrics.maxGpuTemp") }}</div>
+          <div class="metric-trend" style="background: #fee2e2; color: #dc2626">
+            {{ $t("metrics.hardware") }}
+          </div>
+        </div>
+        <div
+          class="metric-card"
+          style="--accent-color: #f59e0b; --accent-color-light: #fbbf24"
+        >
+          <div class="metric-value">
+            {{ analysisData.maxGpuPower?.toFixed(0) || "N/A" }}W
+          </div>
+          <div class="metric-label">{{ $t("metrics.maxGpuPower") }}</div>
+          <div class="metric-trend" style="background: #fef3c7; color: #d97706">
+            {{ $t("metrics.energy") }}
+          </div>
+        </div>
+        <div
+          class="metric-card"
+          style="--accent-color: #3b82f6; --accent-color-light: #60a5fa"
+        >
+          <div class="metric-value">
+            {{ analysisData.avgGpuUtil?.toFixed(1) || "N/A" }}%
+          </div>
+          <div class="metric-label">{{ $t("metrics.avgGpuUtil") }}</div>
+          <div class="metric-trend" style="background: #dbeafe; color: #2563eb">
+            {{ $t("metrics.performance") }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts-section">
+        <!-- Performance FPS Chart -->
+        <div v-if="showCharts.timeline" class="chart-card timeline">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <Icon name="lucide:activity" class="w-5 h-5" />
+              {{ $t("charts.performanceFps") }}
+            </h3>
+            <div class="chart-stats">
+              {{ analysisData.fpsData?.length || 0 }}
+              {{ $t("analysis.samples") }}
+            </div>
+          </div>
+          <div class="chart-container">
+            <FpsChart
+              :data="analysisData.fpsData"
+              :hardwareData="analysisData.utilizationData"
+              :frametimeData="analysisData.frametimeData"
+            />
           </div>
         </div>
 
-        <!-- Key Metrics -->
-        <div class="metrics-grid">
-          <div
-            class="metric-card"
-            style="--accent-color: #10b981; --accent-color-light: #34d399"
-          >
-            <div class="metric-value">
-              {{ analysisData.avgFps?.toFixed(1) || "N/A" }}
-            </div>
-            <div class="metric-label">FPS Moyen</div>
-            <div
-              class="metric-trend"
-              style="background: #dcfce7; color: #16a34a"
-            >
-              Gaming
-            </div>
-          </div>
-          <div
-            class="metric-card"
-            style="--accent-color: #ef4444; --accent-color-light: #f87171"
-          >
-            <div class="metric-value">
-              {{ analysisData.maxGpuTemp?.toFixed(0) || "N/A" }}°
-            </div>
-            <div class="metric-label">Temp GPU Max</div>
-            <div
-              class="metric-trend"
-              style="background: #fee2e2; color: #dc2626"
-            >
-              Hardware
+        <!-- Section Separator -->
+        <div
+          v-if="
+            showCharts.timeline &&
+            (showCharts.temperature ||
+              showCharts.power ||
+              showCharts.utilization)
+          "
+          class="section-separator"
+        >
+          <div class="separator-line"></div>
+          <div class="separator-text">{{ $t("charts.hardwareMetrics") }}</div>
+          <div class="separator-line"></div>
+        </div>
+
+        <!-- Temperature Chart -->
+        <div v-if="showCharts.temperature" class="chart-card temperature">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <Icon name="lucide:thermometer" class="w-5 h-5" />
+              {{ $t("charts.temperaturesHardware") }}
+            </h3>
+            <div class="chart-stats">
+              {{ analysisData.temperatureData?.length || 0 }}
+              {{ $t("analysis.samples") }}
             </div>
           </div>
-          <div
-            class="metric-card"
-            style="--accent-color: #f59e0b; --accent-color-light: #fbbf24"
-          >
-            <div class="metric-value">
-              {{ analysisData.maxGpuPower?.toFixed(0) || "N/A" }}W
-            </div>
-            <div class="metric-label">Puissance GPU</div>
-            <div
-              class="metric-trend"
-              style="background: #fef3c7; color: #d97706"
-            >
-              Énergie
-            </div>
-          </div>
-          <div
-            class="metric-card"
-            style="--accent-color: #3b82f6; --accent-color-light: #60a5fa"
-          >
-            <div class="metric-value">
-              {{ analysisData.avgGpuUtil?.toFixed(1) || "N/A" }}%
-            </div>
-            <div class="metric-label">Util. GPU Moy.</div>
-            <div
-              class="metric-trend"
-              style="background: #dbeafe; color: #2563eb"
-            >
-              Performance
-            </div>
+          <div class="chart-container">
+            <TemperatureChart :data="analysisData.temperatureData" />
           </div>
         </div>
 
-        <!-- Charts Section -->
-        <div class="charts-section">
-          <!-- Performance FPS Chart -->
-          <div v-if="showCharts.timeline" class="chart-card timeline">
-            <div class="chart-header">
-              <h3 class="chart-title">
-                <Icon name="lucide:activity" class="w-5 h-5" />
-                Performance FPS
-              </h3>
-              <div class="chart-stats">
-                {{ analysisData.fpsData?.length || 0 }} échantillons
-              </div>
-            </div>
-            <div class="chart-container">
-              <FpsChart
-                :data="analysisData.fpsData"
-                :hardwareData="analysisData.utilizationData"
-                :frametimeData="analysisData.frametimeData"
-              />
+        <!-- Power Chart -->
+        <div v-if="showCharts.power" class="chart-card power">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <Icon name="lucide:zap" class="w-5 h-5" />
+              {{ $t("charts.powerConsumption") }}
+            </h3>
+            <div class="chart-stats">
+              {{ analysisData.powerData?.length || 0 }}
+              {{ $t("analysis.samples") }}
             </div>
           </div>
-
-          <!-- Section Separator -->
-          <div
-            v-if="
-              showCharts.timeline &&
-              (showCharts.temperature ||
-                showCharts.power ||
-                showCharts.utilization)
-            "
-            class="section-separator"
-          >
-            <div class="separator-line"></div>
-            <div class="separator-text">Métriques Hardware</div>
-            <div class="separator-line"></div>
-          </div>
-
-          <!-- Temperature Chart -->
-          <div v-if="showCharts.temperature" class="chart-card temperature">
-            <div class="chart-header">
-              <h3 class="chart-title">
-                <Icon name="lucide:thermometer" class="w-5 h-5" />
-                Températures Hardware
-              </h3>
-              <div class="chart-stats">
-                {{ analysisData.temperatureData?.length || 0 }} échantillons
-              </div>
-            </div>
-            <div class="chart-container">
-              <TemperatureChart :data="analysisData.temperatureData" />
-            </div>
-          </div>
-
-          <!-- Power Chart -->
-          <div v-if="showCharts.power" class="chart-card power">
-            <div class="chart-header">
-              <h3 class="chart-title">
-                <Icon name="lucide:zap" class="w-5 h-5" />
-                Consommation Énergétique
-              </h3>
-              <div class="chart-stats">
-                {{ analysisData.powerData?.length || 0 }} échantillons
-              </div>
-            </div>
-            <div class="chart-container">
-              <PowerChart :data="analysisData.powerData" />
-            </div>
-          </div>
-
-          <!-- Utilization Chart -->
-          <div v-if="showCharts.utilization" class="chart-card utilization">
-            <div class="chart-header">
-              <h3 class="chart-title">
-                <Icon name="lucide:bar-chart-3" class="w-5 h-5" />
-                Utilisation Système
-              </h3>
-              <div class="chart-stats">
-                {{ analysisData.utilizationData?.length || 0 }} échantillons
-              </div>
-            </div>
-            <div class="chart-container">
-              <UtilizationChart :data="analysisData.utilizationData" />
-            </div>
+          <div class="chart-container">
+            <PowerChart :data="analysisData.powerData" />
           </div>
         </div>
 
-        <!-- Export Tools -->
-        <div class="control-panel">
-          <h3 class="control-title">Outils d'Export</h3>
-          <div class="control-buttons">
-            <button @click="exportData" class="control-button">
-              <Icon name="lucide:download" class="w-4 h-4" />
-              Exporter JSON
-            </button>
-            <button @click="generateReport" class="control-button">
-              <Icon name="lucide:file-text" class="w-4 h-4" />
-              Rapport Détaillé
-            </button>
-            <button @click="shareResults" class="control-button">
-              <Icon name="lucide:share-2" class="w-4 h-4" />
-              Partager Résultats
-            </button>
+        <!-- Utilization Chart -->
+        <div v-if="showCharts.utilization" class="chart-card utilization">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <Icon name="lucide:bar-chart-3" class="w-5 h-5" />
+              {{ $t("charts.systemUtilization") }}
+            </h3>
+            <div class="chart-stats">
+              {{ analysisData.utilizationData?.length || 0 }}
+              {{ $t("analysis.samples") }}
+            </div>
           </div>
+          <div class="chart-container">
+            <UtilizationChart :data="analysisData.utilizationData" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Tools -->
+      <div class="control-panel">
+        <h3 class="control-title">{{ $t("export.title") }}</h3>
+        <div class="control-buttons">
+          <button @click="exportData" class="control-button">
+            <Icon name="lucide:download" class="w-4 h-4" />
+            {{ $t("export.exportJson") }}
+          </button>
+          <button @click="generateReport" class="control-button">
+            <Icon name="lucide:file-text" class="w-4 h-4" />
+            {{ $t("export.detailedReport") }}
+          </button>
+          <button @click="shareResults" class="control-button">
+            <Icon name="lucide:share-2" class="w-4 h-4" />
+            {{ $t("export.shareResults") }}
+          </button>
         </div>
       </div>
     </div>
@@ -294,10 +278,10 @@ const clearFiles = () => {
 
 // Parse CSV files
 const parseCSV = async (file) => {
-  return new Promise(async (resolve, reject) => {
-    // Dynamic import for client-side only
-    const Papa = await import("papaparse").then((module) => module.default);
+  // Dynamic import for client-side only
+  const Papa = await import("papaparse").then((module) => module.default);
 
+  return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -481,6 +465,8 @@ const shareResults = () => {
 };
 </script>
 
-<style>
-/* Component-specific styles if needed */
+<style scoped>
+.page-content {
+  /* Contenu de la page, les styles sont dans main.css */
+}
 </style>

@@ -1,0 +1,94 @@
+{
+  "app": {
+    "title": "AMD Log Analyzer",
+    "subtitle": "Analysez vos performances gaming avec AMD Adrenaline"
+  },
+  "analysis": {
+    "start": "Commencer l'Analyse",
+    "launch": "Lancer l'Analyse",
+    "new": "Nouvelle Analyse",
+    "ready": "Prêt pour l'analyse !",
+    "preparing": "Préparation de l'analyse...",
+    "samples": "échantillons"
+  },
+  "controls": {
+    "title": "Contrôles d'Affichage",
+    "performance": "Performance FPS",
+    "temperatures": "Températures",
+    "power": "Consommation",
+    "utilization": "Utilisation"
+  },
+  "metrics": {
+    "avgFps": "FPS Moyen",
+    "maxGpuTemp": "Temp GPU Max",
+    "maxGpuPower": "Puissance GPU",
+    "avgGpuUtil": "Util. GPU Moy.",
+    "gaming": "Gaming",
+    "hardware": "Hardware",
+    "energy": "Énergie",
+    "performance": "Performance"
+  },
+  "charts": {
+    "performanceFps": "Performance FPS",
+    "hardwareMetrics": "Métriques Hardware",
+    "temperaturesHardware": "Températures Hardware",
+    "powerConsumption": "Consommation Électrique",
+    "hardwareUtilization": "Utilisation Hardware",
+    "systemUtilization": "Utilisation Système"
+  },
+  "upload": {
+    "instructions": {
+      "title": "Sélectionnez vos fichiers AMD Adrenaline",
+      "description": "Chargez les fichiers générés par AMD Adrenaline pour analyser vos performances gaming (CSV requis, FrameTime optionnel)"
+    },
+    "fps": {
+      "title": "Fichier FPS/Latency",
+      "dragText": "Glissez votre fichier FPS ici",
+      "clickText": "ou cliquez pour sélectionner",
+      "format": "Format: FPS.Latency.*.CSV",
+      "loaded": "Fichier FPS chargé"
+    },
+    "hardware": {
+      "title": "Fichier Hardware",
+      "dragText": "Glissez votre fichier Hardware ici",
+      "clickText": "ou cliquez pour sélectionner",
+      "format": "Format: Hardware.*.CSV",
+      "loaded": "Fichier Hardware chargé"
+    },
+    "frametime": {
+      "title": "Fichier FrameTime",
+      "dragText": "Glissez votre fichier FrameTime ici",
+      "clickText": "ou cliquez pour sélectionner",
+      "format": "Format: *.FrameTime",
+      "loaded": "Fichier FrameTime chargé",
+      "detailed": "+ FrameTime détaillé"
+    },
+    "status": {
+      "required": "Requis",
+      "optional": "Optionnel"
+    }
+  },
+  "export": {
+    "title": "Outils d'Export",
+    "exportJson": "Exporter JSON",
+    "detailedReport": "Rapport Détaillé",
+    "shareResults": "Partager Résultats"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "theme": "Thème",
+    "about": "À propos",
+    "modernGradient": "Dégradé moderne",
+    "version": "AMD Log Analyzer v1.0",
+    "description": "Analyseur de performances gaming"
+  },
+  "common": {
+    "or": "ou",
+    "close": "Fermer",
+    "clear": "Effacer",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès"
+  }
+}
