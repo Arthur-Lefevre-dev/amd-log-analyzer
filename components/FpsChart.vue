@@ -14,10 +14,10 @@
             </p>
           </div>
           <div class="stats-summary text-sm text-gray-600">
-            <span>FPS Moy: {{ avgFps }}</span>
+            <span>GPU Max: {{ maxGpuUtil }}%</span>
+            <span class="ml-3">CPU Max: {{ maxCpuUtil }}%</span>
+            <span class="ml-3">FPS Moy: {{ avgFps }}</span>
             <span class="ml-3">FPS Min: {{ minFps }}</span>
-            <span class="ml-3">GPU: {{ maxGpuUtil }}%</span>
-            <span class="ml-3">CPU: {{ maxCpuUtil }}%</span>
           </div>
         </div>
       </div>
@@ -77,12 +77,52 @@ const currentApp = computed(() => {
   if (!props.data || props.data.length === 0) return "Application inconnue";
 
   const firstEntry = props.data[0];
-  return firstEntry["Application"] || firstEntry["App"] || "Gaming Session";
+  let processName =
+    firstEntry["PROCESS"] ||
+    firstEntry["Application"] ||
+    firstEntry["App"] ||
+    "Gaming Session";
+
+  // Remove .exe extension if present
+  if (processName.toLowerCase().endsWith(".exe")) {
+    processName = processName.slice(0, -4);
+  }
+
+  return processName;
 });
 
 const sessionDurationFormatted = computed(() => {
+  // Use FrameTime data if available for accurate session duration
+  if (props.frametimeData && props.frametimeData.length > 0) {
+    const totalFrames = props.frametimeData.length;
+    const totalDurationSeconds = totalFrames / 60; // Assuming 60 FPS base rate
+    const minutes = Math.floor(totalDurationSeconds / 60);
+    const seconds = Math.floor(totalDurationSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  // Fallback to FPS data if FrameTime not available
   if (!props.data || props.data.length < 2) return "0:00";
 
+  // Try to extract actual timestamps from FPS data
+  const firstEntry = props.data[0];
+  const lastEntry = props.data[props.data.length - 1];
+
+  if (firstEntry["DATE"] && lastEntry["DATE"]) {
+    try {
+      const startTime = new Date(firstEntry["DATE"]);
+      const endTime = new Date(lastEntry["DATE"]);
+      const durationMs = endTime - startTime;
+      const durationSeconds = Math.floor(durationMs / 1000);
+      const minutes = Math.floor(durationSeconds / 60);
+      const seconds = durationSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    } catch (error) {
+      console.warn("Erreur parsing dates:", error);
+    }
+  }
+
+  // Final fallback - approximation based on data points
   const duration = props.data.length * 0.1; // Approximation
   const minutes = Math.floor(duration / 60);
   const seconds = Math.floor(duration % 60);
@@ -91,20 +131,42 @@ const sessionDurationFormatted = computed(() => {
 
 // Computed properties for data processing
 const processedData = computed(() => {
-  const maxPoints = 80;
+  // Optimal number of points for readability while keeping detail
+  const maxPoints = Math.min(600, props.data.length);
   const step = Math.max(1, Math.floor(props.data.length / maxPoints));
 
   return props.data
     .filter((_, index) => index % step === 0)
     .slice(0, maxPoints)
     .map((item, index) => {
-      // Find corresponding hardware data
-      const hardwarePoint =
-        props.hardwareData?.find(
-          (hw) => Math.abs(new Date(hw["DATE"]) - new Date(item["DATE"])) < 1000
-        ) || {};
+      // Find corresponding hardware data with multiple strategies
+      let hardwarePoint = {};
 
-      return {
+      if (props.hardwareData && props.hardwareData.length > 0) {
+        // Strategy 1: Try exact index match first
+        if (props.hardwareData[index]) {
+          hardwarePoint = props.hardwareData[index];
+        }
+        // Strategy 2: Try finding by timestamp if dates exist
+        else if (item["DATE"] && props.hardwareData.some((hw) => hw["DATE"])) {
+          const found = props.hardwareData.find(
+            (hw) =>
+              Math.abs(new Date(hw["DATE"]) - new Date(item["DATE"])) < 2000
+          );
+          if (found) hardwarePoint = found;
+        }
+        // Strategy 3: Use proportional mapping based on data length
+        else {
+          const hardwareIndex = Math.floor(
+            (index / props.data.length) * props.hardwareData.length
+          );
+          if (props.hardwareData[hardwareIndex]) {
+            hardwarePoint = props.hardwareData[hardwareIndex];
+          }
+        }
+      }
+
+      const processedPoint = {
         index,
         fps: parseFloat(item["FPS"]) || parseFloat(item["Fps"]) || 0,
         frameTime:
@@ -113,6 +175,18 @@ const processedData = computed(() => {
         cpuUtil: parseFloat(hardwarePoint["CPU UTIL"]) || 0,
         timestamp: item["DATE"] || `${index}s`,
       };
+
+      // Debug: Log first few points to see data structure
+      if (index < 3) {
+        console.log(`Point ${index}:`, {
+          fps: processedPoint.fps,
+          gpuUtil: processedPoint.gpuUtil,
+          cpuUtil: processedPoint.cpuUtil,
+          hardwarePoint: hardwarePoint,
+        });
+      }
+
+      return processedPoint;
     })
     .filter((point) => point.fps > 0 || point.gpuUtil > 0 || point.cpuUtil > 0);
 });
@@ -124,47 +198,46 @@ const chartData = computed(() => ({
     return `${Math.floor(index * 0.5)}s`;
   }),
   datasets: [
-    // Bar dataset for FPS
+    // Bar datasets for utilization
     {
       type: "bar",
-      label: "FPS",
-      data: processedData.value.map((point) => point.fps),
-      backgroundColor: "rgba(59, 130, 246, 0.7)",
-      borderColor: "rgba(59, 130, 246, 1)",
-      borderWidth: 1,
-      yAxisID: "y",
-      order: 3,
-    },
-    // Line datasets for utilization
-    {
-      type: "line",
       label: "GPU UTIL",
       data: processedData.value.map((point) => point.gpuUtil),
+      backgroundColor: "rgba(16, 185, 129, 0.7)",
       borderColor: "rgba(16, 185, 129, 1)",
-      backgroundColor: "rgba(16, 185, 129, 0.1)",
-      borderWidth: 2,
-      fill: false,
-      tension: 0.4,
-      pointRadius: 2,
-      pointHoverRadius: 4,
-      pointBackgroundColor: "rgba(16, 185, 129, 1)",
-      yAxisID: "y1",
-      order: 1,
-    },
-    {
-      type: "line",
-      label: "CPU UTIL",
-      data: processedData.value.map((point) => point.cpuUtil),
-      borderColor: "rgba(249, 115, 22, 1)",
-      backgroundColor: "rgba(249, 115, 22, 0.1)",
-      borderWidth: 2,
-      fill: false,
-      tension: 0.4,
-      pointRadius: 2,
-      pointHoverRadius: 4,
-      pointBackgroundColor: "rgba(249, 115, 22, 1)",
+      borderWidth: 1,
       yAxisID: "y1",
       order: 2,
+      barPercentage: 0.8,
+      categoryPercentage: 0.9,
+    },
+    {
+      type: "bar",
+      label: "CPU UTIL",
+      data: processedData.value.map((point) => point.cpuUtil),
+      backgroundColor: "rgba(249, 115, 22, 0.7)",
+      borderColor: "rgba(249, 115, 22, 1)",
+      borderWidth: 1,
+      yAxisID: "y1",
+      order: 3,
+      barPercentage: 0.8,
+      categoryPercentage: 0.9,
+    },
+    // Line dataset for FPS
+    {
+      type: "line",
+      label: "FPS",
+      data: processedData.value.map((point) => point.fps),
+      borderColor: "rgba(59, 130, 246, 1)",
+      backgroundColor: "rgba(59, 130, 246, 0.1)",
+      borderWidth: 3,
+      fill: false,
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: "rgba(59, 130, 246, 1)",
+      yAxisID: "y",
+      order: 1,
     },
     // Optional Frame Time line (if data available)
     ...(processedData.value.some((p) => p.frameTime > 0)
@@ -250,16 +323,20 @@ const chartOptions = computed(() => ({
         },
       },
       ticks: {
-        maxTicksLimit: 15,
+        maxTicksLimit: 20,
         font: {
           size: 11,
+        },
+        callback: function (value, index) {
+          // Show every 5th label for better readability
+          return index % 5 === 0 ? this.getLabelForValue(value) : "";
         },
       },
     },
     y: {
       type: "linear",
       display: true,
-      position: "left",
+      position: "right",
       title: {
         display: true,
         text: "FPS",
@@ -279,13 +356,13 @@ const chartOptions = computed(() => ({
         },
       },
       grid: {
-        color: "rgba(0, 0, 0, 0.1)",
+        drawOnChartArea: false,
       },
     },
     y1: {
       type: "linear",
       display: true,
-      position: "right",
+      position: "left",
       title: {
         display: true,
         text: "Utilisation (%)",
@@ -307,7 +384,7 @@ const chartOptions = computed(() => ({
         },
       },
       grid: {
-        drawOnChartArea: false,
+        color: "rgba(0, 0, 0, 0.1)",
       },
     },
     // Optional third axis for Frame Time
@@ -347,11 +424,23 @@ const minFps = computed(() => {
 
 const maxGpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.gpuUtil).filter((u) => u > 0);
+  console.log(
+    "GPU Utils found:",
+    utils.length,
+    "samples, max:",
+    utils.length > 0 ? Math.max(...utils) : "none"
+  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
 const maxCpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.cpuUtil).filter((u) => u > 0);
+  console.log(
+    "CPU Utils found:",
+    utils.length,
+    "samples, max:",
+    utils.length > 0 ? Math.max(...utils) : "none"
+  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 </script>

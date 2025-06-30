@@ -154,7 +154,7 @@
               </div>
             </div>
             <div class="chart-container">
-              <AppTimelineChart
+              <FpsChart
                 :data="analysisData.fpsData"
                 :hardwareData="analysisData.utilizationData"
                 :frametimeData="analysisData.frametimeData"
