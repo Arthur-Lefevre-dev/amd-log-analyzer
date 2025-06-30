@@ -24,18 +24,44 @@
 
       <!-- Chart.js Chart -->
       <div class="chart-container" style="height: 400px; position: relative">
-        <!-- Reset Button -->
-        <button @click="resetZoom" class="reset-zoom-btn" title="Reset zoom">
-          🔍 Reset
-        </button>
-        <Bar ref="chart" :data="chartData" :options="chartOptions" />
+        <ClientOnly>
+          <div v-if="isReady && processedData.length > 0">
+            <!-- Reset Button -->
+            <button
+              @click="resetZoom"
+              class="reset-zoom-btn"
+              title="Reset zoom"
+            >
+              🔍 Reset
+            </button>
+            <Bar ref="chart" :data="chartData" :options="chartOptions" />
+          </div>
+          <div v-else class="chart-loading">
+            <div class="flex items-center justify-center h-full">
+              <div class="text-gray-500">
+                {{
+                  !isReady
+                    ? "Chargement du graphique..."
+                    : "Aucune donnée disponible"
+                }}
+              </div>
+            </div>
+          </div>
+          <template #fallback>
+            <div class="chart-loading">
+              <div class="flex items-center justify-center h-full">
+                <div class="text-gray-500">Initialisation...</div>
+              </div>
+            </div>
+          </template>
+        </ClientOnly>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,6 +69,8 @@ import {
   BarElement,
   LineElement,
   PointElement,
+  BarController,
+  LineController,
   Title,
   Tooltip,
   Legend,
@@ -56,17 +84,29 @@ ChartJS.register(
   BarElement,
   LineElement,
   PointElement,
+  BarController,
+  LineController,
   Title,
   Tooltip,
   Legend
 );
 
+// State for plugin loading
+const isReady = ref(false);
+
 // Client-side only zoom plugin registration
-if (import.meta.client) {
-  import("chartjs-plugin-zoom").then((zoomPlugin) => {
-    ChartJS.register(zoomPlugin.default);
-  });
-}
+onMounted(async () => {
+  try {
+    if (import.meta.client) {
+      const zoomPlugin = await import("chartjs-plugin-zoom");
+      ChartJS.register(zoomPlugin.default);
+    }
+  } catch (error) {
+    console.warn("Zoom plugin failed to load:", error);
+  } finally {
+    isReady.value = true;
+  }
+});
 
 // Props
 const props = defineProps({
@@ -188,15 +228,7 @@ const processedData = computed(() => {
         timestamp: item["DATE"] || `${index}s`,
       };
 
-      // Debug: Log first few points to see data structure
-      if (index < 3) {
-        console.log(`Point ${index}:`, {
-          fps: processedPoint.fps,
-          gpuUtil: processedPoint.gpuUtil,
-          cpuUtil: processedPoint.cpuUtil,
-          hardwarePoint: hardwarePoint,
-        });
-      }
+      // Debug logs removed for production
 
       return processedPoint;
     })
@@ -433,36 +465,37 @@ const chartOptions = computed(() => ({
     },
   },
   plugins: {
-    ...(import.meta.client && {
-      zoom: {
-        limits: {
-          x: { min: "original", max: "original" },
-          y: { min: "original", max: "original" },
-          y1: { min: "original", max: "original" },
-        },
+    ...(isReady.value &&
+      import.meta.client && {
         zoom: {
-          wheel: {
-            enabled: true,
-            speed: 0.1,
+          limits: {
+            x: { min: "original", max: "original" },
+            y: { min: "original", max: "original" },
+            y1: { min: "original", max: "original" },
           },
-          pinch: {
-            enabled: true,
+          zoom: {
+            wheel: {
+              enabled: true,
+              speed: 0.1,
+            },
+            pinch: {
+              enabled: true,
+            },
+            drag: {
+              enabled: true,
+              backgroundColor: "rgba(59, 130, 246, 0.2)",
+              borderColor: "rgba(59, 130, 246, 1)",
+              borderWidth: 1,
+            },
+            mode: "x",
           },
-          drag: {
+          pan: {
             enabled: true,
-            backgroundColor: "rgba(59, 130, 246, 0.2)",
-            borderColor: "rgba(59, 130, 246, 1)",
-            borderWidth: 1,
+            mode: "x",
+            threshold: 10,
           },
-          mode: "x",
         },
-        pan: {
-          enabled: true,
-          mode: "x",
-          threshold: 10,
-        },
-      },
-    }),
+      }),
   },
 }));
 
@@ -481,23 +514,11 @@ const minFps = computed(() => {
 
 const maxGpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.gpuUtil).filter((u) => u > 0);
-  console.log(
-    "GPU Utils found:",
-    utils.length,
-    "samples, max:",
-    utils.length > 0 ? Math.max(...utils) : "none"
-  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
 const maxCpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.cpuUtil).filter((u) => u > 0);
-  console.log(
-    "CPU Utils found:",
-    utils.length,
-    "samples, max:",
-    utils.length > 0 ? Math.max(...utils) : "none"
-  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
@@ -580,6 +601,17 @@ const resetZoom = () => {
 
 .reset-zoom-btn:hover {
   background-color: #2563eb;
+}
+
+.chart-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
 }
 
 .font-semibold {
