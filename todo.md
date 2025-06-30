@@ -3,4 +3,5 @@
 3. God Graph 100% Perso
 4. i18n
 5. dark mode
-6. Trouver un point 7
+6. Trouver un point 8
+7. realtime Tracking 
