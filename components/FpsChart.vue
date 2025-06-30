@@ -188,16 +188,6 @@ const processedData = computed(() => {
         timestamp: item["DATE"] || `${index}s`,
       };
 
-      // Debug: Log first few points to see data structure
-      if (index < 3) {
-        console.log(`Point ${index}:`, {
-          fps: processedPoint.fps,
-          gpuUtil: processedPoint.gpuUtil,
-          cpuUtil: processedPoint.cpuUtil,
-          hardwarePoint: hardwarePoint,
-        });
-      }
-
       return processedPoint;
     })
     .filter((point) => point.fps > 0 || point.gpuUtil > 0 || point.cpuUtil > 0);
@@ -221,46 +211,53 @@ const chartData = computed(() => ({
     return `${Math.floor(index * 0.1)}s`;
   }),
   datasets: [
-    // Bar datasets for utilization
+    // Bar datasets for utilization (plus fins et transparents pour arrière-plan)
     {
       type: "bar",
       label: "GPU UTIL",
       data: processedData.value.map((point) => point.gpuUtil),
-      backgroundColor: "rgba(16, 185, 129, 0.7)",
-      borderColor: "rgba(16, 185, 129, 1)",
-      borderWidth: 1,
+      backgroundColor: "rgba(34, 197, 94, 0.4)",
+      borderColor: "rgba(34, 197, 94, 0.8)",
+      borderWidth: 0,
       yAxisID: "y1",
-      order: 2,
-      barPercentage: 0.8,
-      categoryPercentage: 0.9,
+      order: 3,
+      barPercentage: 1.0,
+      categoryPercentage: 1.0,
+      maxBarThickness: 3,
     },
     {
       type: "bar",
       label: "CPU UTIL",
       data: processedData.value.map((point) => point.cpuUtil),
-      backgroundColor: "rgba(249, 115, 22, 0.7)",
-      borderColor: "rgba(249, 115, 22, 1)",
-      borderWidth: 1,
+      backgroundColor: "rgba(249, 115, 22, 0.4)",
+      borderColor: "rgba(249, 115, 22, 0.8)",
+      borderWidth: 0,
       yAxisID: "y1",
-      order: 3,
-      barPercentage: 0.8,
-      categoryPercentage: 0.9,
+      order: 4,
+      barPercentage: 1.0,
+      categoryPercentage: 1.0,
+      maxBarThickness: 3,
     },
-    // Line dataset for FPS
+    // Line dataset for FPS (ligne proéminente au premier plan)
     {
       type: "line",
       label: "FPS",
       data: processedData.value.map((point) => point.fps),
-      borderColor: "rgba(59, 130, 246, 1)",
-      backgroundColor: "rgba(59, 130, 246, 0.1)",
-      borderWidth: 3,
+      borderColor: "#2563EB",
+      backgroundColor: "rgba(37, 99, 235, 0.2)",
+      borderWidth: 4,
       fill: false,
-      tension: 0,
-      pointRadius: 1,
-      pointHoverRadius: 3,
-      pointBackgroundColor: "rgba(59, 130, 246, 1)",
+      tension: 0.1,
+      pointRadius: 0,
+      pointHoverRadius: 6,
+      pointBackgroundColor: "#2563EB",
+      pointBorderColor: "#FFFFFF",
+      pointBorderWidth: 2,
       yAxisID: "y",
       order: 1,
+      shadowColor: "rgba(37, 99, 235, 0.5)",
+      shadowBlur: 4,
+      shadowOffsetY: 2,
     },
     // Optional Frame Time line (if data available)
     ...(processedData.value.some((p) => p.frameTime > 0)
@@ -293,6 +290,21 @@ const chartOptions = computed(() => ({
   interaction: {
     mode: "index",
     intersect: false,
+  },
+  elements: {
+    bar: {
+      borderRadius: 1,
+      borderSkipped: "bottom",
+    },
+    line: {
+      borderJoinStyle: "round",
+      borderCapStyle: "round",
+    },
+    point: {
+      radius: 0,
+      hoverRadius: 8,
+      hitRadius: 10,
+    },
   },
   plugins: {
     title: {
@@ -365,7 +377,7 @@ const chartOptions = computed(() => ({
       title: {
         display: true,
         text: "FPS",
-        color: "rgba(59, 130, 246, 1)",
+        color: "#2563EB",
         font: {
           size: 14,
           weight: "bold",
@@ -375,13 +387,15 @@ const chartOptions = computed(() => ({
         callback: function (value) {
           return value + " fps";
         },
-        color: "rgba(59, 130, 246, 0.8)",
+        color: "#2563EB",
         font: {
-          size: 11,
+          size: 12,
+          weight: "bold",
         },
       },
       grid: {
         drawOnChartArea: false,
+        color: "rgba(37, 99, 235, 0.3)",
       },
     },
     y1: {
@@ -391,7 +405,7 @@ const chartOptions = computed(() => ({
       title: {
         display: true,
         text: "Utilisation (%)",
-        color: "rgba(16, 185, 129, 1)",
+        color: "#22C55E",
         font: {
           size: 14,
           weight: "bold",
@@ -403,13 +417,15 @@ const chartOptions = computed(() => ({
         callback: function (value) {
           return value + "%";
         },
-        color: "rgba(16, 185, 129, 0.8)",
+        color: "#22C55E",
         font: {
           size: 11,
+          weight: "500",
         },
+        stepSize: 20,
       },
       grid: {
-        color: "rgba(0, 0, 0, 0.1)",
+        color: "rgba(34, 197, 94, 0.2)",
       },
     },
     // Optional third axis for Frame Time
@@ -481,23 +497,11 @@ const minFps = computed(() => {
 
 const maxGpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.gpuUtil).filter((u) => u > 0);
-  console.log(
-    "GPU Utils found:",
-    utils.length,
-    "samples, max:",
-    utils.length > 0 ? Math.max(...utils) : "none"
-  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
 const maxCpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.cpuUtil).filter((u) => u > 0);
-  console.log(
-    "CPU Utils found:",
-    utils.length,
-    "samples, max:",
-    utils.length > 0 ? Math.max(...utils) : "none"
-  );
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
 
