@@ -11,47 +11,72 @@
         </div>
       </div>
 
+      <!-- Zoom Controls -->
+      <div class="zoom-controls">
+        <button @click="zoomIn" class="zoom-btn" title="Zoom In">🔍+</button>
+        <button @click="zoomOut" class="zoom-btn" title="Zoom Out">🔍-</button>
+        <button @click="resetZoom" class="zoom-btn" title="Reset Zoom">
+          🔍 Reset
+        </button>
+      </div>
+
       <!-- Utilization Area Chart -->
       <div class="simple-chart">
         <div
           class="chart-area bg-gray-50 p-4 rounded relative"
-          style="height: 200px"
+          style="height: 200px; overflow-x: auto; overflow-y: hidden"
+          ref="chartContainer"
         >
-          <!-- GPU Utilization -->
-          <div class="util-area gpu-util" v-if="gpuUtilPoints.length > 0">
-            <div
-              v-for="(point, index) in gpuUtilPoints"
-              :key="'gpu-util-' + index"
-              class="util-bar bg-green-500"
-              :style="getBarStyle(point.util, index, gpuUtilPoints.length)"
-              :title="`GPU: ${point.util}%`"
-            ></div>
-          </div>
+          <div
+            class="chart-content"
+            :style="{
+              transform: `scaleX(${zoomLevel})`,
+              transformOrigin: 'left center',
+              width: '100%',
+            }"
+          >
+            <!-- GPU Utilization -->
+            <div class="util-area gpu-util" v-if="gpuUtilPoints.length > 0">
+              <div
+                v-for="(point, index) in gpuUtilPoints"
+                :key="'gpu-util-' + index"
+                class="util-bar bg-green-500"
+                :style="getBarStyle(point.util, index, gpuUtilPoints.length)"
+                :title="`GPU: ${point.util}%`"
+              ></div>
+            </div>
 
-          <!-- CPU Utilization -->
-          <div class="util-area cpu-util" v-if="cpuUtilPoints.length > 0">
-            <div
-              v-for="(point, index) in cpuUtilPoints"
-              :key="'cpu-util-' + index"
-              class="util-bar bg-purple-500"
-              :style="
-                getBarStyle(point.util, index, cpuUtilPoints.length, true)
-              "
-              :title="`CPU: ${point.util}%`"
-            ></div>
-          </div>
+            <!-- CPU Utilization -->
+            <div class="util-area cpu-util" v-if="cpuUtilPoints.length > 0">
+              <div
+                v-for="(point, index) in cpuUtilPoints"
+                :key="'cpu-util-' + index"
+                class="util-bar bg-purple-500"
+                :style="
+                  getBarStyle(point.util, index, cpuUtilPoints.length, true)
+                "
+                :title="`CPU: ${point.util}%`"
+              ></div>
+            </div>
 
-          <!-- Memory Utilization -->
-          <div class="util-area mem-util" v-if="memUtilPoints.length > 0">
-            <div
-              v-for="(point, index) in memUtilPoints"
-              :key="'mem-util-' + index"
-              class="util-bar bg-indigo-500"
-              :style="
-                getBarStyle(point.util, index, memUtilPoints.length, false, 0.5)
-              "
-              :title="`RAM: ${point.util}%`"
-            ></div>
+            <!-- Memory Utilization -->
+            <div class="util-area mem-util" v-if="memUtilPoints.length > 0">
+              <div
+                v-for="(point, index) in memUtilPoints"
+                :key="'mem-util-' + index"
+                class="util-bar bg-indigo-500"
+                :style="
+                  getBarStyle(
+                    point.util,
+                    index,
+                    memUtilPoints.length,
+                    false,
+                    0.5
+                  )
+                "
+                :title="`RAM: ${point.util}%`"
+              ></div>
+            </div>
           </div>
         </div>
 
@@ -92,6 +117,8 @@
 </template>
 
 <script setup>
+import { ref, computed } from "vue";
+
 // Props
 const props = defineProps({
   data: {
@@ -205,6 +232,10 @@ const avgMemUtil = computed(() => {
   return avg.toFixed(1);
 });
 
+// Zoom functionality
+const zoomLevel = ref(1);
+const chartContainer = ref(null);
+
 // Methods
 const getBarStyle = (
   util,
@@ -226,6 +257,25 @@ const getBarStyle = (
     opacity: opacity,
     borderRadius: "2px 2px 0 0", // Ajoute des coins arrondis en haut
   };
+};
+
+const zoomIn = () => {
+  if (zoomLevel.value < 10) {
+    zoomLevel.value = Math.min(10, zoomLevel.value * 1.5);
+  }
+};
+
+const zoomOut = () => {
+  if (zoomLevel.value > 0.5) {
+    zoomLevel.value = Math.max(0.5, zoomLevel.value / 1.5);
+  }
+};
+
+const resetZoom = () => {
+  zoomLevel.value = 1;
+  if (chartContainer.value) {
+    chartContainer.value.scrollLeft = 0;
+  }
 };
 </script>
 
@@ -317,5 +367,38 @@ const getBarStyle = (
 }
 .rounded {
   border-radius: 0.25rem;
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.zoom-btn {
+  background-color: #6366f1;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-btn:hover {
+  background-color: #4f46e5;
+}
+
+.zoom-btn:active {
+  transform: translateY(1px);
+}
+
+.chart-content {
+  transition: transform 0.3s ease;
+  position: relative;
+  height: 100%;
 }
 </style>

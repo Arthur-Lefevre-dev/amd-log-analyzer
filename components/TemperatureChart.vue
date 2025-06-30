@@ -18,6 +18,10 @@
 
       <!-- Chart.js Chart -->
       <div class="chart-container" style="height: 350px; position: relative">
+        <!-- Reset Button -->
+        <button @click="resetZoom" class="reset-zoom-btn" title="Reset zoom">
+          🔍 Reset
+        </button>
         <Bar ref="chart" :data="chartData" :options="chartOptions" />
       </div>
     </div>
@@ -49,6 +53,13 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Client-side only zoom plugin registration
+if (import.meta.client) {
+  import("chartjs-plugin-zoom").then((zoomPlugin) => {
+    ChartJS.register(zoomPlugin.default);
+  });
+}
 
 // Props
 const props = defineProps({
@@ -322,6 +333,39 @@ const chartOptions = computed(() => ({
       hoverRadius: 5,
     },
   },
+  plugins: {
+    ...(import.meta.client && {
+      zoom: {
+        limits: {
+          x: { min: "original", max: "original" },
+          y: { min: "original", max: "original" },
+          y1: { min: "original", max: "original" },
+          y2: { min: "original", max: "original" },
+        },
+        zoom: {
+          wheel: {
+            enabled: true,
+            speed: 0.1,
+          },
+          pinch: {
+            enabled: true,
+          },
+          drag: {
+            enabled: true,
+            backgroundColor: "rgba(239, 68, 68, 0.2)",
+            borderColor: "rgba(239, 68, 68, 1)",
+            borderWidth: 1,
+          },
+          mode: "x",
+        },
+        pan: {
+          enabled: true,
+          mode: "x",
+          threshold: 10,
+        },
+      },
+    }),
+  },
 }));
 
 // Statistics
@@ -344,6 +388,15 @@ const maxCpuUtil = computed(() => {
   const utils = processedData.value.map((p) => p.cpuUtil).filter((u) => u > 0);
   return utils.length > 0 ? Math.max(...utils).toFixed(1) : "0";
 });
+
+// Chart methods
+const chart = ref(null);
+
+const resetZoom = () => {
+  if (chart.value && chart.value.chart) {
+    chart.value.chart.resetZoom();
+  }
+};
 </script>
 
 <style scoped>
@@ -414,5 +467,25 @@ const maxCpuUtil = computed(() => {
 
 .items-center {
   align-items: center;
+}
+
+.reset-zoom-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: #ef4444;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+}
+
+.reset-zoom-btn:hover {
+  background-color: #dc2626;
 }
 </style>
