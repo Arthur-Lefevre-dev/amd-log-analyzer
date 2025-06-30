@@ -130,12 +130,8 @@ const memUtilValues = computed(() => {
 });
 
 const gpuUtilPoints = computed(() => {
-  const maxPoints = 40;
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
-
+  // Display all data points for detailed view
   return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
     .map((item) => ({
       util: parseFloat(item["GPU UTIL"]),
       raw: item,
@@ -144,12 +140,8 @@ const gpuUtilPoints = computed(() => {
 });
 
 const cpuUtilPoints = computed(() => {
-  const maxPoints = 40;
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
-
+  // Display all data points for detailed view
   return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
     .map((item) => ({
       util: parseFloat(item["CPU UTIL"]),
       raw: item,
@@ -158,12 +150,8 @@ const cpuUtilPoints = computed(() => {
 });
 
 const memUtilPoints = computed(() => {
-  const maxPoints = 40;
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
-
+  // Display all data points for detailed view
   return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
     .map((item) => ({
       // Try multiple possible column names for memory utilization
       util:
@@ -227,7 +215,7 @@ const getBarStyle = (
 ) => {
   const x = (index / Math.max(1, totalPoints - 1)) * 100;
   const height = Math.min(90, Math.max(2, util)); // Réduit la hauteur max pour éviter les débordements
-  const width = Math.max(0.8, 100 / totalPoints - 0.5); // Réduit la largeur pour éviter les chevauchements
+  const width = Math.max(0.2, Math.min(2, 100 / totalPoints - 0.1)); // Adapt width based on number of points
 
   return {
     position: "absolute",

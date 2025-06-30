@@ -34,7 +34,14 @@
     "temperaturesHardware": "Températures Hardware",
     "powerConsumption": "Consommation Électrique",
     "hardwareUtilization": "Utilisation Hardware",
-    "systemUtilization": "Utilisation Système"
+    "systemUtilization": "Utilisation Système",
+    "fullscreen": "Plein écran",
+    "exitFullscreen": "Quitter plein écran",
+    "closeFullscreen": "Fermer",
+    "navigate": "Naviguer",
+    "toggleFullscreen": "Basculer plein écran",
+    "previous": "Précédent",
+    "next": "Suivant"
   },
   "upload": {
     "instructions": {

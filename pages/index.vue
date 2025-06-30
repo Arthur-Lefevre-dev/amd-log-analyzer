@@ -130,9 +130,18 @@
               <Icon name="lucide:activity" class="w-5 h-5" />
               {{ $t("charts.performanceFps") }}
             </h3>
-            <div class="chart-stats">
-              {{ analysisData.fpsData?.length || 0 }}
-              {{ $t("analysis.samples") }}
+            <div class="chart-actions">
+              <button
+                @click="openFullscreen('fps')"
+                class="fullscreen-button"
+                :title="$t('charts.fullscreen')"
+              >
+                <Icon name="lucide:maximize-2" class="w-4 h-4" />
+              </button>
+              <div class="chart-stats">
+                {{ analysisData.fpsData?.length || 0 }}
+                {{ $t("analysis.samples") }}
+              </div>
             </div>
           </div>
           <div class="chart-container">
@@ -166,9 +175,18 @@
               <Icon name="lucide:thermometer" class="w-5 h-5" />
               {{ $t("charts.temperaturesHardware") }}
             </h3>
-            <div class="chart-stats">
-              {{ analysisData.temperatureData?.length || 0 }}
-              {{ $t("analysis.samples") }}
+            <div class="chart-actions">
+              <button
+                @click="openFullscreen('temperature')"
+                class="fullscreen-button"
+                :title="$t('charts.fullscreen')"
+              >
+                <Icon name="lucide:maximize-2" class="w-4 h-4" />
+              </button>
+              <div class="chart-stats">
+                {{ analysisData.temperatureData?.length || 0 }}
+                {{ $t("analysis.samples") }}
+              </div>
             </div>
           </div>
           <div class="chart-container">
@@ -183,9 +201,18 @@
               <Icon name="lucide:zap" class="w-5 h-5" />
               {{ $t("charts.powerConsumption") }}
             </h3>
-            <div class="chart-stats">
-              {{ analysisData.powerData?.length || 0 }}
-              {{ $t("analysis.samples") }}
+            <div class="chart-actions">
+              <button
+                @click="openFullscreen('power')"
+                class="fullscreen-button"
+                :title="$t('charts.fullscreen')"
+              >
+                <Icon name="lucide:maximize-2" class="w-4 h-4" />
+              </button>
+              <div class="chart-stats">
+                {{ analysisData.powerData?.length || 0 }}
+                {{ $t("analysis.samples") }}
+              </div>
             </div>
           </div>
           <div class="chart-container">
@@ -200,9 +227,18 @@
               <Icon name="lucide:bar-chart-3" class="w-5 h-5" />
               {{ $t("charts.systemUtilization") }}
             </h3>
-            <div class="chart-stats">
-              {{ analysisData.utilizationData?.length || 0 }}
-              {{ $t("analysis.samples") }}
+            <div class="chart-actions">
+              <button
+                @click="openFullscreen('utilization')"
+                class="fullscreen-button"
+                :title="$t('charts.fullscreen')"
+              >
+                <Icon name="lucide:maximize-2" class="w-4 h-4" />
+              </button>
+              <div class="chart-stats">
+                {{ analysisData.utilizationData?.length || 0 }}
+                {{ $t("analysis.samples") }}
+              </div>
             </div>
           </div>
           <div class="chart-container">
@@ -210,6 +246,15 @@
           </div>
         </div>
       </div>
+
+      <!-- Fullscreen Chart Modal -->
+      <FullscreenChart
+        :is-open="isFullscreenOpen"
+        :initial-chart="currentFullscreenChart"
+        :available-charts="availableCharts"
+        :analysis-data="analysisData"
+        @close="closeFullscreen"
+      />
 
       <!-- Export Tools -->
       <div class="control-panel">
@@ -249,6 +294,20 @@ const showCharts = ref({
   utilization: true,
 });
 
+// Fullscreen controls
+const isFullscreenOpen = ref(false);
+const currentFullscreenChart = ref("fps");
+
+// Available charts for fullscreen (computed based on visible charts)
+const availableCharts = computed(() => {
+  const charts = [];
+  if (showCharts.value.timeline) charts.push("fps");
+  if (showCharts.value.temperature) charts.push("temperature");
+  if (showCharts.value.power) charts.push("power");
+  if (showCharts.value.utilization) charts.push("utilization");
+  return charts;
+});
+
 // File handling
 const handleFpsFileSelect = (file) => {
   fpsFile.value = file;
@@ -274,6 +333,16 @@ const clearFiles = () => {
     power: true,
     utilization: true,
   };
+};
+
+// Fullscreen methods
+const openFullscreen = (chartType) => {
+  currentFullscreenChart.value = chartType;
+  isFullscreenOpen.value = true;
+};
+
+const closeFullscreen = () => {
+  isFullscreenOpen.value = false;
 };
 
 // Parse CSV files

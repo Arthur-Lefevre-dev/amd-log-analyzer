@@ -34,7 +34,14 @@
     "temperaturesHardware": "Hardware Temperatures",
     "powerConsumption": "Power Consumption",
     "hardwareUtilization": "Hardware Utilization",
-    "systemUtilization": "System Utilization"
+    "systemUtilization": "System Utilization",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "closeFullscreen": "Close",
+    "navigate": "Navigate",
+    "toggleFullscreen": "Toggle fullscreen",
+    "previous": "Previous",
+    "next": "Next"
   },
   "upload": {
     "instructions": {

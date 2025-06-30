@@ -60,12 +60,8 @@ const props = defineProps({
 
 // Computed properties for data processing
 const processedData = computed(() => {
-  const maxPoints = 50;
-  const step = Math.max(1, Math.floor(props.data.length / maxPoints));
-
+  // Display all data points for more detailed view
   return props.data
-    .filter((_, index) => index % step === 0)
-    .slice(0, maxPoints)
     .map((item, index) => ({
       index,
       gpuPower: parseFloat(item["GPU BRD PWR"]) || 0,
@@ -119,8 +115,8 @@ const chartData = computed(() => ({
       borderWidth: 2,
       fill: false,
       tension: 0.4,
-      pointRadius: 3,
-      pointHoverRadius: 5,
+      pointRadius: 1,
+      pointHoverRadius: 3,
       pointBackgroundColor: "rgba(168, 85, 247, 1)",
       yAxisID: "y1",
       order: 1,
@@ -134,8 +130,8 @@ const chartData = computed(() => ({
       borderWidth: 2,
       fill: false,
       tension: 0.4,
-      pointRadius: 3,
-      pointHoverRadius: 5,
+      pointRadius: 1,
+      pointHoverRadius: 3,
       pointBackgroundColor: "rgba(59, 130, 246, 1)",
       yAxisID: "y1",
       order: 2,
@@ -201,9 +197,10 @@ const chartOptions = computed(() => ({
         },
       },
       ticks: {
-        maxTicksLimit: 10,
+        maxTicksLimit: 15,
+        maxRotation: 45,
         font: {
-          size: 11,
+          size: 10,
         },
       },
     },
