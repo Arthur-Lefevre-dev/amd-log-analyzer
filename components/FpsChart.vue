@@ -143,8 +143,8 @@ const sessionDurationFormatted = computed(() => {
 
 // Computed properties for data processing
 const processedData = computed(() => {
-  // Optimal number of points for readability while keeping detail
-  const maxPoints = Math.min(600, props.data.length);
+  // Display 20% of total data points
+  const maxPoints = Math.floor(props.data.length * 0.2);
   const step = Math.max(1, Math.floor(props.data.length / maxPoints));
 
   return props.data
@@ -206,8 +206,19 @@ const processedData = computed(() => {
 // Chart data configuration
 const chartData = computed(() => ({
   labels: processedData.value.map((point, index) => {
-    // Simplified time labels
-    return `${Math.floor(index * 0.5)}s`;
+    // More precise time labels based on actual data
+    if (point.timestamp && point.timestamp !== `${index}s`) {
+      const date = new Date(point.timestamp);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString("fr-FR", {
+          hour12: false,
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+    }
+    // Fallback to index-based timing
+    return `${Math.floor(index * 0.1)}s`;
   }),
   datasets: [
     // Bar datasets for utilization
@@ -244,9 +255,9 @@ const chartData = computed(() => ({
       backgroundColor: "rgba(59, 130, 246, 0.1)",
       borderWidth: 3,
       fill: false,
-      tension: 0.4,
-      pointRadius: 3,
-      pointHoverRadius: 5,
+      tension: 0,
+      pointRadius: 1,
+      pointHoverRadius: 3,
       pointBackgroundColor: "rgba(59, 130, 246, 1)",
       yAxisID: "y",
       order: 1,
@@ -262,9 +273,9 @@ const chartData = computed(() => ({
             backgroundColor: "rgba(124, 58, 237, 0.1)",
             borderWidth: 2,
             fill: false,
-            tension: 0.4,
-            pointRadius: 2,
-            pointHoverRadius: 4,
+            tension: 0,
+            pointRadius: 1,
+            pointHoverRadius: 3,
             pointBackgroundColor: "rgba(124, 58, 237, 1)",
             borderDash: [5, 5],
             yAxisID: "y2",
@@ -335,13 +346,15 @@ const chartOptions = computed(() => ({
         },
       },
       ticks: {
-        maxTicksLimit: 20,
+        maxTicksLimit: 25,
         font: {
-          size: 11,
+          size: 10,
         },
         callback: function (value, index) {
-          // Show every 5th label for better readability
-          return index % 5 === 0 ? this.getLabelForValue(value) : "";
+          // Show fewer labels with all data points to avoid crowding
+          const totalPoints = this.chart.data.labels.length;
+          const step = Math.max(1, Math.floor(totalPoints / 20));
+          return index % step === 0 ? this.getLabelForValue(value) : "";
         },
       },
     },
